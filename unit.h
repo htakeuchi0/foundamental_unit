@@ -27,8 +27,8 @@
  * [1] 石田 信，数学全書5 代数的整数論，森北出版株式会社，東京，1985.
  */
 
-#ifndef ALGEBRA_UNIT_H
-#define ALGEBRA_UNIT_H
+#ifndef FOUNDAMENTAL_UNIT_UNIT_H
+#define FOUNDAMENTAL_UNIT_UNIT_H
 
 #include <iostream>
 #include <stdexcept>
@@ -119,4 +119,4 @@ void Show(int m, const LongInteger& u, const LongInteger& t, const LongInteger& 
  */
 void DisplayFoundamentalUnits(int max_num = 200);
 
-#endif // #ifndef ALGEBRA_UNIT_H
+#endif // #ifndef FOUNDAMENTAL_UNIT_UNIT_H
