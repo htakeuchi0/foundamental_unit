@@ -112,12 +112,12 @@ bool MeetRequirementsSquare(const LongInteger& a) {
 /* 与えられた整数が平方数ならtrueを返し、平方根も返す。
  *
  * @param a 平方数か判定したい整数
- * @param t 平方数の場合は平方根（そうでない場合は未定義）
+ * @param root 平方数の場合は平方根（そうでない場合は未定義）
  * @return 平方数ならtrue
  */
-bool IsSquare(const LongInteger& a, LongInteger& t) {
+bool IsSquare(const LongInteger& a, LongInteger& root) {
     // 初期化
-    t = -1;
+    root = -1;
 
     // 平方数の可能性がない場合はfalseを返して終了
     if (!MeetRequirementsSquare(a)) {
@@ -139,7 +139,7 @@ bool IsSquare(const LongInteger& a, LongInteger& t) {
 
         LongInteger squared_middle = middle * middle;
         if (a == squared_middle) {
-            t = middle;
+            root = middle;
             return true;
         }
         else if (a < squared_middle) {
@@ -157,14 +157,14 @@ bool IsSquare(const LongInteger& a, LongInteger& t) {
 /* 実二次体K=Q(√m) (mは平方因子をもたない整数) の基本単数を計算する。
  *
  * @param m 実二次体K=Q(√m)のm
- * @param u 基本単数ε=(t+u√D)/2のu (ただし、DはKの判別式)
  * @param t 基本単数ε=(t+u√D)/2のt (ただし、DはKの判別式)
+ * @param u 基本単数ε=(t+u√D)/2のu (ただし、DはKの判別式)
  * @return 基本単数のノルム
  */
-int FoundamentalUnit(int m, LongInteger& u, LongInteger& t) {
-    // u, tの初期化
-    u = 1;
+int FoundamentalUnit(int m, LongInteger& t, LongInteger& u) {
+    // t, uの初期化
     t = -1;
+    u = 1;
 
     // 判別式の計算
     int d = Discriminant(m);
@@ -200,22 +200,22 @@ int FoundamentalUnit(int m, LongInteger& u, LongInteger& t) {
 /* 実二次体K=Q(√m)の基本単数を整えて表示する。
  *
  * @param m 実二次体K=Q(√m)のm
- * @param u 基本単数ε=(t+u√D)/2のu (ただし、DはKの判別式)
  * @param t 基本単数ε=(t+u√D)/2のt (ただし、DはKの判別式)
+ * @param u 基本単数ε=(t+u√D)/2のu (ただし、DはKの判別式)
  * @param d Kの判別式
  * @param sign 基本単数のノルム
  */
-void Show(int m, const LongInteger& u, const LongInteger& t, 
+void Show(int m, const LongInteger& t, const LongInteger& u, 
           const LongInteger& d, int sign) {
     bool is_divisible_by_two = ((u & 0b1) == 0) && ((t & 0b1) == 0);
 
     // u, tがともに偶数の場合は約分した状態で表示する。
     if (is_divisible_by_two) {
-        LongInteger u_divided = u >> 1;
         LongInteger t_divided = t >> 1;
+        LongInteger u_divided = u >> 1;
 
         // uが1のときは1を省略する
-        if (u == 1) {
+        if (u_divided == 1) {
             std::cout << m << "," << sign << "," << t_divided << "+" << "√" << d << "\n";
         }
         else {
@@ -250,11 +250,11 @@ void DisplayFoundamentalUnits(int max_num) {
             continue;
         }
 
-        LongInteger u;
         LongInteger t;
+        LongInteger u;
         try {
             // 基本単数を求める
-            int sign = FoundamentalUnit(m, u, t);
+            int sign = FoundamentalUnit(m, t, u);
 
             // 判別式
             LongInteger d = Discriminant(m);
@@ -267,7 +267,7 @@ void DisplayFoundamentalUnits(int max_num) {
             u *= square_part_d;
 
             // 表示
-            Show(m, u, t, d, sign);
+            Show(m, t, u, d, sign);
         }
         catch (const std::exception& e) {
             // エラー内容を表示

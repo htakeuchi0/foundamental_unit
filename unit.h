@@ -96,21 +96,31 @@ bool MeetRequirementsSquare(const LongInteger& a);
 /** 与えられた整数が平方数ならtrueを返し、平方根も返す。
  *
  * @param a 平方数か判定したい整数
- * @param t 平方数の場合は平方根（そうでない場合は未定義）
+ * @param root 平方数の場合は平方根（そうでない場合は未定義）
  * @return 平方数ならtrue
  */
-bool IsSquare(const LongInteger& a, LongInteger& t);
+bool IsSquare(const LongInteger& a, LongInteger& root);
+
+
+/** 実二次体K=Q(√m) (mは平方因子をもたない整数) の基本単数を計算する。
+ *
+ * @param m 実二次体K=Q(√m)のm
+ * @param t 基本単数ε=(t+u√D)/2のt (ただし、DはKの判別式)
+ * @param u 基本単数ε=(t+u√D)/2のu (ただし、DはKの判別式)
+ * @return 基本単数のノルム
+ */
+int FoundamentalUnit(int m, LongInteger& t, LongInteger& u);
 
 
 /** 実二次体K=Q(√m)の基本単数を整えて表示する。
  *
  * @param m 実二次体K=Q(√m)のm
- * @param u 基本単数ε=(t+u√D)/2のu (ただし、DはKの判別式)
  * @param t 基本単数ε=(t+u√D)/2のt (ただし、DはKの判別式)
+ * @param u 基本単数ε=(t+u√D)/2のu (ただし、DはKの判別式)
  * @param d Kの判別式
  * @param sign 基本単数のノルム
  */
-void Show(int m, const LongInteger& u, const LongInteger& t, const LongInteger& d, int sign);
+void Show(int m, const LongInteger& t, const LongInteger& u, const LongInteger& d, int sign);
 
 
 /** 基本単数を表示する。
