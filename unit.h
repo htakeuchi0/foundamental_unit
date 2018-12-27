@@ -90,7 +90,7 @@ int Discriminant(int m);
  * @param 平方数か判定したい整数
  * @param 必要条件を満たす場合true
  */
-bool MeetRequirementsSquare(const LongInteger& a);
+bool SatisfiesRequirementsSquare(const LongInteger& a);
 
 
 /** 与えられた整数が平方数ならtrueを返し、平方根も返す。

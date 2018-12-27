@@ -77,7 +77,7 @@ int Discriminant(int m) {
  * @param 平方数か判定したい整数
  * @param 必要条件を満たす場合true
  */
-bool MeetRequirementsSquare(const LongInteger& a) {
+bool SatisfiesRequirementsSquare(const LongInteger& a) {
     // 平方数の下2桁のパターン
     int lower_digits[] = {0, 1, 4, 9, 16, 21, 24, 25, 29, 36, 41, 44,
         49, 56, 61, 64, 69, 76, 81, 84, 89, 96};
@@ -120,7 +120,7 @@ bool IsSquare(const LongInteger& a, LongInteger& root) {
     root = -1;
 
     // 平方数の可能性がない場合はfalseを返して終了
-    if (!MeetRequirementsSquare(a)) {
+    if (!SatisfiesRequirementsSquare(a)) {
         return false;
     }
 
