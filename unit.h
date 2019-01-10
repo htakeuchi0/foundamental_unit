@@ -32,6 +32,7 @@
 
 #include <iostream>
 #include <stdexcept>
+#include <cmath>
 
 // GMPを使わない場合は次の行をコメントアウト
 #define GMP
@@ -128,5 +129,25 @@ void Show(int m, const LongInteger& t, const LongInteger& u, const LongInteger& 
  * @param max_num K=Q(√m) (mは平方因子をもたない) におけるmの最大値
  */
 void DisplayFoundamentalUnits(int max_num = 200);
+
+
+/** 配列 a の a[start]〜a[end] が対称になっていればtrueを返す．
+ *
+ * @param a 配列
+ * @param start 対称となる部分配列の初めの要素番号
+ * @param start 対称となる部分配列の最後の要素番号
+ * @return 配列が対称になっているときtrue
+ */
+bool IsCheckArray(int *a, int start, int end);
+
+
+/** 整数nに対する√nの連分数の係数を求め，循環節+1を返す．
+ * 
+ * @param n 整数
+ * @param coeffs 連分数の係数
+ * @param max_num_coeffs 連分数の係数の最大個数
+ * @return 循環節+1の値
+ */
+int ApproxContinuedFraction(int n, int *coeffs, int max_num_coeffs = 1000);
 
 #endif // #ifndef FOUNDAMENTAL_UNIT_UNIT_H

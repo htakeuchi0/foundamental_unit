@@ -41,7 +41,7 @@ LongInteger SquarePart(const LongInteger& a, const LongInteger& start) {
     if (start * start > a) {
         return 1;
     }
-    
+
     // 再帰的に探索
     for (LongInteger i = start; i < a; i++) {
         // 平方数で割り切れるか確認
@@ -84,7 +84,7 @@ bool SatisfiesRequirementsSquare(const LongInteger& a) {
 
     // 下2桁
     LongInteger a_lower_digit = a % 100;
-    
+
     // 下2桁が平方数の下2桁リストにあるか二分法で検索する
     int left = 0;
     int right = length(lower_digits) - 1;
@@ -129,7 +129,7 @@ bool IsSquare(const LongInteger& a, LongInteger& root) {
     LongInteger right = a;
     while (left <= right) {
         LongInteger middle = (left + right) >> 1;
-        
+
 #ifndef GMP
         // オーバフロー判定
         if (middle >= (1LL << 32)) {
@@ -206,7 +206,7 @@ int FoundamentalUnit(int m, LongInteger& t, LongInteger& u) {
  * @param sign 基本単数のノルム
  */
 void Show(int m, const LongInteger& t, const LongInteger& u, 
-          const LongInteger& d, int sign) {
+        const LongInteger& d, int sign) {
     bool is_divisible_by_two = ((u & 0b1) == 0) && ((t & 0b1) == 0);
 
     // u, tがともに偶数の場合は約分した状態で表示する。
@@ -220,7 +220,7 @@ void Show(int m, const LongInteger& t, const LongInteger& u,
         }
         else {
             std::cout << m << "," << sign << "," << t_divided << "+" 
-                      << u_divided << "√" << d << "\n";
+                << u_divided << "√" << d << "\n";
         }
     }
     else {
@@ -277,11 +277,176 @@ void DisplayFoundamentalUnits(int max_num) {
 }
 
 
+/* 配列 a の a[start]〜a[end] が対称になっていればtrueを返す．
+ *
+ * @param a 配列
+ * @param start 対称となる部分配列の初めの要素番号
+ * @param start 対称となる部分配列の最後の要素番号
+ */
+bool IsCheckArray(int *a, int start, int end) {
+    int i = start;
+    int j = end;
+
+    while (i < j) {
+        if (a[i] != a[j]) {
+            return false;
+        }
+        i++;
+        j--;
+    }
+
+    return true;
+}
+
+
+/* 整数nに対する√nの連分数の係数を求め，循環節+1を返す．
+ * 
+ * @param n 整数
+ * @param coeffs 連分数の係数
+ * @param max_num_coeffs 連分数の係数の最大個数
+ * @return 循環節+1の値
+ */
+int ApproxContinuedFraction(int n, int *coeffs, int max_num_coeffs) {
+    // nの平方根を計算
+    double omega = std::sqrt(n);
+
+    for (int i = 0; i < max_num_coeffs; i++) {
+        // omegaの整数部分が連分数の係数になる
+        coeffs[i] = static_cast<int>(omega);
+
+        // 循環節が見つかったらループを終了
+        if (coeffs[i] == 2*coeffs[0] && IsCheckArray(coeffs, 1, i-1)) {
+            return i + 1;
+        }
+
+        // √nの連分数は，書き下すと，
+        //                           1
+        // √n = a[0] + -----------------------------
+        //                              1 
+        //             a[1] + ---------------------- 
+        //                                1
+        //                     a[2] + --------------
+        //                               ...
+        //                                 
+        // となるため，以下の手続きで a[0], a[1], ... が求まる．
+        //
+        //   1: ω[0] := √n 
+        //   2: i := 0
+        //   3: while do
+        //   4:     a[i] := floor(ω[i])
+        //   5:     ω[i+1] := 1 / (ω[i] - a[i])
+        //   6:     i := i + 1
+        //   7: end while
+        //
+        // ただし，√nの平方根の計算や，ωの更新で堆積する計算誤差によって
+        // 上記手続きをそのまま実装すると正しく係数 a が求まらないことがある．
+        // （作成者環境では√139で破綻した）
+        //
+        // そこで，a[i]は整数であることを利用して，
+        // 以下の整数 α, β, γ, δ を誤差なしで求める．
+        //
+        //              α + β√n
+        //    ω[i+1] = --------
+        //              γ + δ√n
+        //
+        // ω[i+1]は連分数の形をとるため，逐次的に計算できる．
+        // ここで，ω[i+1]の左辺を変形し，
+        //    
+        //              α + β√n    αγ - βδn   βγ - αδ
+        //    ω[i+1] = --------- = -------- + --------√n = p + q√n
+        //              γ + δ√n    γ^2-δ^2n   γ^2-δ^2n
+        //
+        // を満たすp, qを浮動小数点数として求め，p + q√n をNewton法で求める．
+        // 
+        // Newton法は x(new) := x(old) + Δx の形となり，浮動小数点数の演算では
+        // Δx が x(old)に比べて十分小さければ，Δx は高い精度で求まっている必要はなく，
+        // ω[i+1]が高精度に計算できることが期待される．
+        //
+        // p + q√n は2次方程式 x^2 - 2px + (p^2 - q^2n) = 0 の根なので，
+        // 初期値を p + qn としてNewton法を適用すればよいことがわかる．
+        // この方法では，計算誤差の蓄積や，平方根計算における誤差の伝播の影響がなく，
+        // Newton法による反復計算で精度良くω[i+1]が計算できると期待される
+        // (ω[i+1]の整数部分が正しく求める程度の精度でよい点に注意されたい）
+
+        // 連分数計算
+        long long int p0 = 1;
+        long long int p1 = 0;
+        long long int q0 = 0;
+        long long int q1 = 1;
+
+        for (int k = 0; k < i; k++) {
+            long long int p2 = -coeffs[i - k] * p1 + p0;
+            long long int q2 = -coeffs[i - k] * q1 + q0;
+
+            p0 = p1;
+            p1 = p2;
+            q0 = q1;
+            q1 = q2;
+        }
+
+        // α, β, γ, δの計算（すべて整数）
+        long long int a = p0 - coeffs[0]*p1;
+        long long int b = p1;
+        long long int c = q0 - coeffs[0]*q1;
+        long long int d = q1;
+
+        // p, qの分母・分子を計算（整数）
+        long long int p_numer = a*c - b*d*n;
+        long long int q_numer = b*c - a*d;
+        long long int denom = c*c - d*d*n;
+
+        // p, qの計算（倍精度浮動小数点数）
+        double p = static_cast<double>(p_numer) / denom;
+        double q = static_cast<double>(q_numer) / denom;
+
+        // Newton法．初期値はp + qnとする．
+        double x = p + q*n;
+        int max_k = 100;
+        for (int k = 0; k < max_k; k++) {
+            x -= (x*x - 2.0*p*x + (p*p - q*q*n)) / (2.0*(x - p));
+        }
+
+        // omegaの更新
+        omega = x;
+    }
+
+    return -1;
+}
+
+
 /** 実験用メインメソッド
  */
 int main() {
     // 基本単数を表示する
     DisplayFoundamentalUnits();
+
+    // 連分数の結果チェック
+    for (int m = 2; m < 200; m++) {
+        // 平方因子をもつ場合は省略
+        if (SquarePart(m) != 1) {
+            continue;
+        }
+
+        // 係数を格納する配列
+        int a[1000];
+
+        // 連分数を計算
+        int len = ApproxContinuedFraction(m, a);
+
+        // 例外処理
+        if (len <= 0) {
+            std::cerr << "***Error";
+            return 1;
+        }
+
+        // 表示
+        std::cout << m << ": ";
+        std::cout << "[" << a[0] << "; ";
+        for (int i = 1; i < len; i++) {
+            std::cout << a[i] << ", ";
+        }
+        std::cout << "]\n";
+    }
 
     return 0;
 }
