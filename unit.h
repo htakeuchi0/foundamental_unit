@@ -32,7 +32,6 @@
 
 #include <iostream>
 #include <stdexcept>
-#include <cmath>
 
 // GMPを使わない場合は次の行をコメントアウト
 #define GMP
@@ -141,12 +140,20 @@ void DisplayFoundamentalUnits(int max_num = 200);
 bool IsCheckArray(int *a, int start, int end);
 
 
+/** 平方根の整数部分を返す．
+ * 
+ * @param n 整数
+ * @return nの平方根の整数部分
+ */
+int SquareRootIntegerPart(int n);
+
+
 /** 整数nに対する√nの連分数の係数を求め，循環節+1を返す．
  * 
  * @param n 整数
  * @param coeffs 連分数の係数
  * @param max_num_coeffs 連分数の係数の最大個数
- * @return 循環節+1の値
+ * @return 循環節+1の値（異常終了時は-1を返す）
  */
 int ApproxContinuedFraction(int n, int *coeffs, int max_num_coeffs = 1000);
 

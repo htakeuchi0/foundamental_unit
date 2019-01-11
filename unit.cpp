@@ -299,87 +299,104 @@ bool IsCheckArray(int *a, int start, int end) {
 }
 
 
+/* 平方根の整数部分を返す．
+ * 
+ * @param n 整数
+ * @return nの平方根の整数部分
+ */
+int SquareRootIntegerPart(int n) {
+    int left = 1;
+    int right = n;
+    while (right - left > 1) {
+        int middle = (left + right) >> 1;
+
+        if (n < middle*middle) {
+            right = middle;
+        }
+        else {
+            left = middle;
+        }
+    }
+
+    return left;
+}
+
+
 /* 整数nに対する√nの連分数の係数を求め，循環節+1を返す．
  * 
  * @param n 整数
  * @param coeffs 連分数の係数
  * @param max_num_coeffs 連分数の係数の最大個数
- * @return 循環節+1の値
+ * @return 循環節+1の値（異常終了時は-1を返す）
  */
 int ApproxContinuedFraction(int n, int *coeffs, int max_num_coeffs) {
-    // nの平方根を計算
-    double omega = std::sqrt(n);
+    // √nの連分数は，書き下すと，
+    //                           1
+    // √n = a[0] + -----------------------------
+    //                              1 
+    //             a[1] + ---------------------- 
+    //                                1
+    //                     a[2] + --------------
+    //                               ...
+    //                                 
+    // となるため，以下の手続きで a[0], a[1], ... が求まる．
+    //
+    //   1: ω[0] := √n 
+    //   2: i := 0
+    //   3: while do
+    //   4:     a[i] := floor(ω[i])
+    //   5:     ω[i+1] := 1 / (ω[i] - a[i])
+    //   6:     i := i + 1
+    //   7: end while
+    //
+    // ただし，√nを浮動小数点数演算で求めたときに含まれる誤差や，
+    // ω[i]->ω[i+1] の更新における計算誤差が，繰り返し計算で蓄積するため，
+    // 上記手続きをそのまま実装すると正しく係数 a が求まらないことがある．
+    // （作成者環境では√139で破綻した）
+    //
+    // そこで，a[i]は整数であることを利用して，以下のようにω[i+1]を精度良く求める．
+    // (1) まず，以下の整数 α, β, γ, δ を求める．
+    //
+    //              α + β√n
+    //    ω[i+1] = --------      (*)
+    //              γ + δ√n
+    //
+    // ω[i+1]は連分数の形をとるため簡単に計算できる．
+    // また，整数のみの演算で計算できるため，この計算中に誤差は含まれない．
+    // 
+    // (2) 次に，(*)の左辺を変形し，
+    //    
+    //              α + β√n    αγ - βδn   βγ - αδ
+    //    ω[i+1] = --------- = -------- + --------√n = p + q√n
+    //              γ + δ√n    γ^2-δ^2n   γ^2-δ^2n
+    //
+    // を満たすp, qを浮動小数点数として求める．
+    //
+    // (3) p + q√n をNewton法で求める．
+    // 
+    // Newton法は，近似値をωとすると，ω(new) := ω(old) + Δω の形となる．
+    // 浮動小数点数演算では，Δω が ω(old)に比べて十分小さければ，
+    // Δωの精度が悪くても，それが ω(new) の精度に大きく影響しないことが期待できる．
+    //
+    // p + q√n は2次方程式 ω^2 - 2pω + (p^2 - q^2n) = 0 の根なので，
+    // qの符号に関わらず，初期値を p + qn としてNewton法を適用すればよい．
+    // この方法では，平方根計算における誤差や，計算誤差の蓄積なく，
+    // Newton法の更新式の性質とあわせ，精度良くω[i+1]=floor(ω)が計算できることが期待される．
+    // (ω[i+1]の整数部分が正しく求める程度の精度でよい点に注意されたい）
+    
+    // nの平方根の整数部分を計算
+    int sqrt_int = SquareRootIntegerPart(n);
+    coeffs[0] = static_cast<int>(sqrt_int);
 
-    for (int i = 0; i < max_num_coeffs; i++) {
-        // omegaの整数部分が連分数の係数になる
-        coeffs[i] = static_cast<int>(omega);
-
-        // 循環節が見つかったらループを終了
-        if (coeffs[i] == 2*coeffs[0] && IsCheckArray(coeffs, 1, i-1)) {
-            return i + 1;
-        }
-
-        // √nの連分数は，書き下すと，
-        //                           1
-        // √n = a[0] + -----------------------------
-        //                              1 
-        //             a[1] + ---------------------- 
-        //                                1
-        //                     a[2] + --------------
-        //                               ...
-        //                                 
-        // となるため，以下の手続きで a[0], a[1], ... が求まる．
-        //
-        //   1: ω[0] := √n 
-        //   2: i := 0
-        //   3: while do
-        //   4:     a[i] := floor(ω[i])
-        //   5:     ω[i+1] := 1 / (ω[i] - a[i])
-        //   6:     i := i + 1
-        //   7: end while
-        //
-        // ただし，√nを浮動小数点数演算で求めたときに含まれる誤差や，
-        // ω[i]->ω[i+1] の更新における計算誤差が，繰り返し計算で蓄積するため，
-        // 上記手続きをそのまま実装すると正しく係数 a が求まらないことがある．
-        // （作成者環境では√139で破綻した）
-        //
-        // そこで，a[i]は整数であることを利用して，以下のようにω[i+1]を精度良く求める．
-        // (1) まず，以下の整数 α, β, γ, δ を求める．
-        //
-        //              α + β√n
-        //    ω[i+1] = --------      (*)
-        //              γ + δ√n
-        //
-        // ω[i+1]は連分数の形をとるため簡単に計算できる．
-        // また，整数のみの演算で計算できるため，この計算中に誤差は含まれない．
-        // 
-        // (2) 次に，(*)の左辺を変形し，
-        //    
-        //              α + β√n    αγ - βδn   βγ - αδ
-        //    ω[i+1] = --------- = -------- + --------√n = p + q√n
-        //              γ + δ√n    γ^2-δ^2n   γ^2-δ^2n
-        //
-        // を満たすp, qを浮動小数点数として求める．
-        //
-        // (3) p + q√n をNewton法で求める．
-        // 
-        // Newton法は x(new) := x(old) + Δx の形となり，浮動小数点数演算では，
-        // Δx が x(old)に比べて十分小さければ，Δx は高精度で計算される必要はなく，
-        // ω[i+1]が高精度に計算できることが期待される．
-        //
-        // p + q√n は2次方程式 x^2 - 2px + (p^2 - q^2n) = 0 の根なので，
-        // 初期値を p + qn としてNewton法を適用すればよい．
-        // この方法では，平方根計算における誤差や，計算誤差の蓄積なく，
-        // Newton法の更新式の性質とあわせ，精度良くω[i+1]が計算できると期待される．
-        // (ω[i+1]の整数部分が正しく求める程度の精度でよい点に注意されたい）
-
+    // a[1]以降を求める．
+    for (int i = 1; i < max_num_coeffs; i++) {
         // 連分数計算
         long long int p0 = 1;
         long long int p1 = 0;
         long long int q0 = 0;
         long long int q1 = 1;
 
-        for (int k = 0; k < i; k++) {
+        for (int k = 1; k < i; k++) {
             long long int p2 = -coeffs[i - k] * p1 + p0;
             long long int q2 = -coeffs[i - k] * q1 + q0;
 
@@ -405,14 +422,19 @@ int ApproxContinuedFraction(int n, int *coeffs, int max_num_coeffs) {
         double q = static_cast<double>(q_numer) / denom;
 
         // Newton法．初期値はp + qnとする．
-        double x = p + q*n;
+        double omega = p + q*n;
         int max_k = 100;
         for (int k = 0; k < max_k; k++) {
-            x -= (x*x - 2.0*p*x + (p*p - q*q*n)) / (2.0*(x - p));
+            omega -= (omega*omega - 2.0*p*omega + (p*p - q*q*n)) / (2.0*(omega - p));
         }
 
-        // omegaの更新
-        omega = x;
+        // omegaの整数部分が連分数の係数になる
+        coeffs[i] = static_cast<int>(omega);
+
+        // 循環節が見つかったらループを終了
+        if (coeffs[i] == 2*coeffs[0] && IsCheckArray(coeffs, 1, i-1)) {
+            return i + 1;
+        }
     }
 
     return -1;
@@ -424,34 +446,6 @@ int ApproxContinuedFraction(int n, int *coeffs, int max_num_coeffs) {
 int main() {
     // 基本単数を表示する
     DisplayFoundamentalUnits();
-
-    // 連分数の結果チェック
-    for (int m = 2; m < 200; m++) {
-        // 平方因子をもつ場合は省略
-        if (SquarePart(m) != 1) {
-            continue;
-        }
-
-        // 係数を格納する配列
-        int a[1000];
-
-        // 連分数を計算
-        int len = ApproxContinuedFraction(m, a);
-
-        // 例外処理
-        if (len <= 0) {
-            std::cerr << "***Error";
-            return 1;
-        }
-
-        // 表示
-        std::cout << m << ": ";
-        std::cout << "[" << a[0] << "; ";
-        for (int i = 1; i < len; i++) {
-            std::cout << a[i] << ", ";
-        }
-        std::cout << "]\n";
-    }
 
     return 0;
 }
