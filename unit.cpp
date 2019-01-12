@@ -255,18 +255,45 @@ void DisplayFoundamentalUnits(int max_num) {
         LongInteger u;
         try {
             // 基本単数を求める
-            if (m % 4 == 2 || m % 4 == 3) {
+            if ((m & 0b10) != 0) {
+                // m≡2 ,3 (mod 4) のとき，K=Q(√m)の基本単数ε0は，
+                // 整数方程式 S^2 - U^2D = ±1 の最小整数解 (s, u) を計算し，
+                // ε0 = s + u√m として求められる．
+                //
+                // 方程式 S^2 - U^2D = ±1 はペル方程式と呼ばれ，以下のように
+                // √n の連分数展開を用いて最小解を計算できることが知られている．
+                //
+                // ペル方程式の最小解の構成法：
+                //   √m = [a0; (a1, a2, ..., al)] (括弧内は循環節を表す）とするとき，
+                //   p/q = [a0; a1, a2, ..., a(l-1)] を既約分数とすると，
+                //   (s, u) = (p, q)が解となる．
+                //
+                // 連分数：
+                //   [a0; a1, ..., al, ...]
+                //
+                //                        1
+                //      := a0 + ---------------------
+                //                          1 
+                //               a1 + ---------------
+                //                     ...
+                //                                1
+                //                         al + -----
+                //                               ...
                 SignedLongInteger p;
                 SignedLongInteger q;
                 
+                // √mの連分数展開を計算する
                 int coeffs[1000];
                 int len = ApproxContinuedFraction(m, coeffs);
+
+                // [a0; a1, ..., a(l-1)]を計算する
                 ContinuedFraction(coeffs, len-1, p, q); 
 
-                t = q*2;
-                u = p*2;
+                // 表示処理統一のために T^2 - U^2D = ±4 の形式にしておく
+                t = p << 1;
+                u = q << 1;
                 LongInteger d = m;
-                LongInteger sign = q*q - p*p*d;
+                LongInteger sign = p*p - q*q*d;
 
                 // 判別式の平方部分
                 LongInteger square_part_d = SquarePart(d);
@@ -284,6 +311,9 @@ void DisplayFoundamentalUnits(int max_num) {
 #endif // #ifdef GMP
             }
             else {
+                // m≡1 (mod 4) のとき，K=Q(√m)の基本単数ε0は，
+                // 整数方程式 T^2 - U^2D = ±4 の最小整数解 (t, u) を計算し，
+                // 基本単数 ε0 = (t + u√D)/2 を求める
                 int sign = FoundamentalUnit(m, t, u);
 
                 // 判別式
@@ -488,12 +518,13 @@ int ApproxContinuedFraction(int n, int *coeffs, int max_num_coeffs) {
 void ContinuedFraction(int *coeffs, int len, 
                        SignedLongInteger& numer, SignedLongInteger& denom) {
     // 連分数計算
+    // ユークリッドの互除法の逆算で計算する．
     SignedLongInteger p0 = 1;
-    SignedLongInteger p1 = 0;
+    SignedLongInteger p1 = coeffs[0];
     SignedLongInteger q0 = 0;
     SignedLongInteger q1 = 1;
 
-    for (int i = 0; i < len; i++) {
+    for (int i = 1; i < len; i++) {
         SignedLongInteger p2 = coeffs[i] * p1 + p0;
         SignedLongInteger q2 = coeffs[i] * q1 + q0;
 
