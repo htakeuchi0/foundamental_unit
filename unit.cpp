@@ -275,10 +275,11 @@ void DisplayFoundamentalUnits(int max_num) {
                 d /= (square_part_d * square_part_d);
                 u *= square_part_d;
 
-                // 表示
 #ifdef GMP
+                // 表示
                 Show(m, t, u, d, sign.get_si());
 #else
+                // 表示
                 Show(m, t, u, d, sign);
 #endif // #ifdef GMP
             }
@@ -477,6 +478,13 @@ int ApproxContinuedFraction(int n, int *coeffs, int max_num_coeffs) {
 }
 
 
+/* 連分数の係数から，分子と分母を計算して返す．
+ *
+ * @param coeffs 連分数の係数
+ * @param len 係数の個数
+ * @param numer 分子
+ * @param denom 分母
+ */
 void ContinuedFraction(int *coeffs, int len, 
                        SignedLongInteger& numer, SignedLongInteger& denom) {
     // 連分数計算

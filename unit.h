@@ -160,7 +160,13 @@ int SquareRootIntegerPart(int n);
  */
 int ApproxContinuedFraction(int n, int *coeffs, int max_num_coeffs = 1000);
 
-//
+/** 連分数の係数から，分子と分母を計算して返す．
+ *
+ * @param coeffs 連分数の係数
+ * @param len 係数の個数
+ * @param numer 分子
+ * @param denom 分母
+ */
 void ContinuedFraction(int *coeffs, int len, 
                        SignedLongInteger& numer, SignedLongInteger& denom);
 
