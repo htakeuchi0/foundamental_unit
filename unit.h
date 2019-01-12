@@ -34,7 +34,7 @@
 #include <stdexcept>
 
 // GMPを使わない場合は次の行をコメントアウト
-#define GMP
+// #define GMP
 
 // 整数型の定義
 #ifdef GMP
@@ -42,9 +42,11 @@
 
     // 整数型
     using LongInteger = mpz_class;
+    using SignedLongInteger = mpz_class;
 #else
     // 整数型
     using LongInteger = unsigned long long int;
+    using SignedLongInteger = long long int;
 #endif  // #ifdef GMP
 
 
@@ -107,9 +109,10 @@ bool IsSquare(const LongInteger& a, LongInteger& root);
  * @param m 実二次体K=Q(√m)のm
  * @param t 基本単数ε=(t+u√D)/2のt (ただし、DはKの判別式)
  * @param u 基本単数ε=(t+u√D)/2のu (ただし、DはKの判別式)
+ * @param is_pell_mode ペル方程式の性質を利用した解法を用いる場合はtrue
  * @return 基本単数のノルム
  */
-int FoundamentalUnit(int m, LongInteger& t, LongInteger& u);
+int FoundamentalUnit(int m, LongInteger& t, LongInteger& u, bool is_pell_mode = true);
 
 
 /** 実二次体K=Q(√m)の基本単数を整えて表示する。
@@ -156,5 +159,9 @@ int SquareRootIntegerPart(int n);
  * @return 循環節+1の値（異常終了時は-1を返す）
  */
 int ApproxContinuedFraction(int n, int *coeffs, int max_num_coeffs = 1000);
+
+//
+void ContinuedFraction(int *coeffs, int len, 
+                       SignedLongInteger& numer, SignedLongInteger& denom);
 
 #endif // #ifndef FOUNDAMENTAL_UNIT_UNIT_H

@@ -159,9 +159,10 @@ bool IsSquare(const LongInteger& a, LongInteger& root) {
  * @param m 実二次体K=Q(√m)のm
  * @param t 基本単数ε=(t+u√D)/2のt (ただし、DはKの判別式)
  * @param u 基本単数ε=(t+u√D)/2のu (ただし、DはKの判別式)
+ * @param is_pell_mode ペル方程式の性質を利用した解法を用いる場合はtrue
  * @return 基本単数のノルム
  */
-int FoundamentalUnit(int m, LongInteger& t, LongInteger& u) {
+int FoundamentalUnit(int m, LongInteger& t, LongInteger& u, bool is_pell_mode) {
     // t, uの初期化
     t = -1;
     u = 1;
@@ -254,20 +255,49 @@ void DisplayFoundamentalUnits(int max_num) {
         LongInteger u;
         try {
             // 基本単数を求める
-            int sign = FoundamentalUnit(m, t, u);
+            if (m % 4 == 2 || m % 4 == 3) {
+                SignedLongInteger p;
+                SignedLongInteger q;
+                
+                int coeffs[1000];
+                int len = ApproxContinuedFraction(m, coeffs);
+                ContinuedFraction(coeffs, len-1, p, q); 
 
-            // 判別式
-            LongInteger d = Discriminant(m);
+                t = q*2;
+                u = p*2;
+                LongInteger d = m;
+                LongInteger sign = q*q - p*p*d;
 
-            // 判別式の平方部分
-            LongInteger square_part_d = SquarePart(d);
+                // 判別式の平方部分
+                LongInteger square_part_d = SquarePart(d);
 
-            // u√dを整理
-            d /= (square_part_d * square_part_d);
-            u *= square_part_d;
+                // u√dを整理
+                d /= (square_part_d * square_part_d);
+                u *= square_part_d;
 
-            // 表示
-            Show(m, t, u, d, sign);
+                // 表示
+#ifdef GMP
+                Show(m, t, u, d, sign.get_si());
+#else
+                Show(m, t, u, d, sign);
+#endif // #ifdef GMP
+            }
+            else {
+                int sign = FoundamentalUnit(m, t, u);
+
+                // 判別式
+                LongInteger d = Discriminant(m);
+
+                // 判別式の平方部分
+                LongInteger square_part_d = SquarePart(d);
+
+                // u√dを整理
+                d /= (square_part_d * square_part_d);
+                u *= square_part_d;
+
+                // 表示
+                Show(m, t, u, d, sign);
+            }
         }
         catch (const std::exception& e) {
             // エラー内容を表示
@@ -391,14 +421,14 @@ int ApproxContinuedFraction(int n, int *coeffs, int max_num_coeffs) {
     // a[1]以降を求める．
     for (int i = 1; i < max_num_coeffs; i++) {
         // 連分数計算
-        long long int p0 = 1;
-        long long int p1 = 0;
-        long long int q0 = 0;
-        long long int q1 = 1;
+        SignedLongInteger p0 = 1;
+        SignedLongInteger p1 = 0;
+        SignedLongInteger q0 = 0;
+        SignedLongInteger q1 = 1;
 
         for (int k = 1; k < i; k++) {
-            long long int p2 = -coeffs[i - k] * p1 + p0;
-            long long int q2 = -coeffs[i - k] * q1 + q0;
+            SignedLongInteger p2 = -coeffs[i - k] * p1 + p0;
+            SignedLongInteger q2 = -coeffs[i - k] * q1 + q0;
 
             p0 = p1;
             p1 = p2;
@@ -407,19 +437,25 @@ int ApproxContinuedFraction(int n, int *coeffs, int max_num_coeffs) {
         }
 
         // α, β, γ, δの計算（すべて整数）
-        long long int a = p0 - coeffs[0]*p1;
-        long long int b = p1;
-        long long int c = q0 - coeffs[0]*q1;
-        long long int d = q1;
+        SignedLongInteger a = p0 - coeffs[0]*p1;
+        SignedLongInteger b = p1;
+        SignedLongInteger c = q0 - coeffs[0]*q1;
+        SignedLongInteger d = q1;
 
         // p, qの分母・分子を計算（整数）
-        long long int p_numer = a*c - b*d*n;
-        long long int q_numer = b*c - a*d;
-        long long int denom = c*c - d*d*n;
+        SignedLongInteger p_numer = a*c - b*d*n;
+        SignedLongInteger q_numer = b*c - a*d;
+        SignedLongInteger denom = c*c - d*d*n;
 
+#ifdef GMP
+        // p, qの計算（倍精度浮動小数点数）
+        double p = p_numer.get_d() / denom.get_d();
+        double q = q_numer.get_d() / denom.get_d();
+#else
         // p, qの計算（倍精度浮動小数点数）
         double p = static_cast<double>(p_numer) / denom;
         double q = static_cast<double>(q_numer) / denom;
+#endif // #ifdef GMP
 
         // Newton法．初期値はp + qnとする．
         double omega = p + q*n;
@@ -438,6 +474,29 @@ int ApproxContinuedFraction(int n, int *coeffs, int max_num_coeffs) {
     }
 
     return -1;
+}
+
+
+void ContinuedFraction(int *coeffs, int len, 
+                       SignedLongInteger& numer, SignedLongInteger& denom) {
+    // 連分数計算
+    SignedLongInteger p0 = 1;
+    SignedLongInteger p1 = 0;
+    SignedLongInteger q0 = 0;
+    SignedLongInteger q1 = 1;
+
+    for (int i = 0; i < len; i++) {
+        SignedLongInteger p2 = coeffs[i] * p1 + p0;
+        SignedLongInteger q2 = coeffs[i] * q1 + q0;
+
+        p0 = p1;
+        p1 = p2;
+        q0 = q1;
+        q1 = q2;
+    }
+
+    numer = p1;
+    denom = q1;
 }
 
 
