@@ -256,7 +256,7 @@ void DisplayFoundamentalUnits(int max_num) {
         try {
             // 基本単数を求める
             if ((m & 0b10) != 0) {
-                // m≡2 ,3 (mod 4) のとき，K=Q(√m)の基本単数ε0は，
+                // m≡2, 3 (mod 4) のとき，K=Q(√m)の基本単数ε0は，
                 // 整数方程式 S^2 - U^2D = ±1 の最小整数解 (s, u) を計算し，
                 // ε0 = s + u√m として求められる．
                 //
@@ -314,7 +314,17 @@ void DisplayFoundamentalUnits(int max_num) {
                 // m≡1 (mod 4) のとき，K=Q(√m)の基本単数ε0は，
                 // 整数方程式 T^2 - U^2D = ±4 の最小整数解 (t, u) を計算し，
                 // 基本単数 ε0 = (t + u√D)/2 を求める
-                int sign = FoundamentalUnit(m, t, u);
+
+                int sign;
+                if (IsSquare(m - 4, t)) {
+                    // m = t^2 + 4の場合，ε0 = (t + √m)/2 となり，
+                    // N_K(ε0) = (t^2 - m)/4 = -1 である．
+                    u = 1;
+                    sign = -1;
+                }
+                else {
+                    sign = FoundamentalUnit(m, t, u);
+                }
 
                 // 判別式
                 LongInteger d = Discriminant(m);
