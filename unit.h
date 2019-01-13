@@ -52,7 +52,7 @@
 #include <stdexcept>
 
 // GMPを使わない場合は次の行をコメントアウト
-// #define GMP
+#define GMP
 
 // 整数型の定義
 #ifdef GMP
