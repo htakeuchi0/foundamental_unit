@@ -241,8 +241,7 @@ int FoundamentalUnitPellEq(int m, LongInteger& t, LongInteger& u) {
     // 表示処理統一のために T^2 - U^2D = ±4 の形式にしておく
     t = p << 1;
     u = q << 1;
-    LongInteger d = m;
-    LongInteger sign_long_int = p*p - q*q*d;
+    LongInteger sign_long_int = p*p - q*q*m;
 
 #ifdef GMP
     int sign = sign_long_int.get_si();
@@ -309,6 +308,7 @@ void DisplayFoundamentalUnits(int max_num) {
 
         LongInteger t;
         LongInteger u;
+        LongInteger d;
         int sign;
         try {
             // 基本単数を求める
@@ -320,6 +320,7 @@ void DisplayFoundamentalUnits(int max_num) {
                 // 方程式 S^2 - U^2D = ±1 はペル方程式と呼ばれ，以下のように
                 // √n の連分数展開を用いて最小解を計算できることが知られている．
                 sign = FoundamentalUnitPellEq(m, t, u);
+                d = m;
             }
             else {
                 // m≡1 (mod 4) のとき，K=Q(√m)の基本単数ε0は，
@@ -337,10 +338,10 @@ void DisplayFoundamentalUnits(int max_num) {
                     // ナイーブな方法でt, uを求める．
                     sign = FoundamentalUnitNaive(m, t, u);
                 }
-            }
 
-            // 判別式
-            LongInteger d = Discriminant(m);
+                // 判別式
+                d = Discriminant(m);
+            }
 
             // 判別式の平方部分
             LongInteger square_part_d = SquarePart(d);
