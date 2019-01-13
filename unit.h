@@ -104,15 +104,24 @@ bool SatisfiesRequirementsSquare(const LongInteger& a);
 bool IsSquare(const LongInteger& a, LongInteger& root);
 
 
-/** 実二次体K=Q(√m) (mは平方因子をもたない整数) の基本単数を計算する。
+/** 実二次体K=Q(√m) (mは平方因子をもたない整数) の基本単数をナイーブな方法で計算する。
  *
  * @param m 実二次体K=Q(√m)のm
  * @param t 基本単数ε=(t+u√D)/2のt (ただし、DはKの判別式)
  * @param u 基本単数ε=(t+u√D)/2のu (ただし、DはKの判別式)
- * @param is_pell_mode ペル方程式の性質を利用した解法を用いる場合はtrue
  * @return 基本単数のノルム
  */
-int FoundamentalUnit(int m, LongInteger& t, LongInteger& u, bool is_pell_mode = true);
+int FoundamentalUnitNaive(int m, LongInteger& t, LongInteger& u);
+
+
+/** 実二次体K=Q(√m) (mは平方因子をもたない整数) の基本単数をペル方程式の解法を使って計算する。
+ *
+ * @param m 実二次体K=Q(√m)のm
+ * @param t 基本単数ε=(t+u√D)/2のt (ただし、DはKの判別式)
+ * @param u 基本単数ε=(t+u√D)/2のu (ただし、DはKの判別式)
+ * @return 基本単数のノルム
+ */
+int FoundamentalUnitPellEq(int m, LongInteger& t, LongInteger& u);
 
 
 /** 実二次体K=Q(√m)の基本単数を整えて表示する。
