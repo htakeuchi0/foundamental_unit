@@ -1,27 +1,45 @@
 /*
- * 二次体K=Q(√m) (mは平方因子をもたない) の基本単数を求めるプログラム。
+ * 実二次体K=Q(√m) (mは平方因子をもたない正整数) の基本単数を求めるプログラム．
  *
- * このモジュールは、[1]の§22.単数(2)に基づくナイーブな実装による、
- * 二次体K=Q(√m) (mは平方因子をもたない) の基本単数を求めるプログラムである。
+ * このモジュールは，
+ * 実二次体K=Q(√m) (mは平方因子をもたない正整数) の基本単数を求めるプログラムである．
  *
- * K=Q(√m)について、判別式をDとすると、Kの単数はT, Uに関する
+ * [1]の§22.単数(2)より，K=Q(√m)について、判別式をDとすると、Kの単数はT, Uに関する
  * 以下の整数方程式
  *  
  *     T^2 - U^2D = ±4
  *
- * の解(T, U)を用いて、
+ * の解(T, U)を用いて，
  *
  *          T + U√D
  *     ε = ---------
  *             2
  *
- * と表される。特に最小正のU=uとそれに対応するT=tをとると、
+ * と表される．特に最小正のU=uとそれに対応するT=tをとると，
  *
  *           t + u√D
  *     ε0 = ---------
  *              2
  *    
- * がKの基本単数(>1)となる。
+ * がKの基本単数(>1)となる．
+ *
+ * ただし，m≡2, 3 (mod 4) の場合は，
+ *
+ *     S^2 - U^2D = ±1    (*)
+ *
+ * の解(S, U)，最小解(s, u)を用いて，
+ *
+ *     ε = S + U√m,    ε0 = s + u√m
+ *
+ * と書ける．
+ *
+ * (*)の形の整数方程式はペル方程式と呼ばれ，
+ * √Dの連分数展開を用いた最小解の構成法が知られている．
+ * 本モジュールでは，m≡2, 3 (mod 4) の場合はこの方法を用いて求める．
+ *
+ * m≡1 (mod 4) の場合でも，m = t^2 + 4 (tは正整数) ｔ書ける場合，
+ * 基本単数が簡単に計算できることが知られている [1, §22, 例3]. 
+ * 本モジュールでは，この解法も採用して，実二次体の基本単数を求める．
  *
  * 参考文献:
  * [1] 石田 信，数学全書5 代数的整数論，森北出版株式会社，東京，1985.
@@ -72,7 +90,6 @@ std::size_t length(const TYPE(&)[SIZE]) {
 LongInteger SquarePart(const LongInteger& a, const LongInteger& start = 2);
 
 
-
 /** 実二次体K=Q(√m) (mは平方因子をもたない整数) の判別式を返す。
  *
  * @param m 実二次体K=Q(√m)におけるm
@@ -114,34 +131,6 @@ bool IsSquare(const LongInteger& a, LongInteger& root);
 int FoundamentalUnitNaive(int m, LongInteger& t, LongInteger& u);
 
 
-/** 実二次体K=Q(√m) (mは平方因子をもたない整数) の基本単数をペル方程式の解法を使って計算する。
- *
- * @param m 実二次体K=Q(√m)のm
- * @param t 基本単数ε=(t+u√D)/2のt (ただし、DはKの判別式)
- * @param u 基本単数ε=(t+u√D)/2のu (ただし、DはKの判別式)
- * @return 基本単数のノルム
- */
-int FoundamentalUnitPellEq(int m, LongInteger& t, LongInteger& u);
-
-
-/** 実二次体K=Q(√m)の基本単数を整えて表示する。
- *
- * @param m 実二次体K=Q(√m)のm
- * @param t 基本単数ε=(t+u√D)/2のt (ただし、DはKの判別式)
- * @param u 基本単数ε=(t+u√D)/2のu (ただし、DはKの判別式)
- * @param d Kの判別式
- * @param sign 基本単数のノルム
- */
-void Show(int m, const LongInteger& t, const LongInteger& u, const LongInteger& d, int sign);
-
-
-/** 基本単数を表示する。
- *
- * @param max_num K=Q(√m) (mは平方因子をもたない) におけるmの最大値
- */
-void DisplayFoundamentalUnits(int max_num = 200);
-
-
 /** 配列 a の a[start]〜a[end] が対称になっていればtrueを返す．
  *
  * @param a 配列
@@ -169,6 +158,7 @@ int SquareRootIntegerPart(int n);
  */
 int ApproxContinuedFraction(int n, int *coeffs, int max_num_coeffs = 1000);
 
+
 /** 連分数の係数から，分子と分母を計算して返す．
  *
  * @param coeffs 連分数の係数
@@ -176,7 +166,34 @@ int ApproxContinuedFraction(int n, int *coeffs, int max_num_coeffs = 1000);
  * @param numer 分子
  * @param denom 分母
  */
-void ContinuedFraction(int *coeffs, int len, 
-                       SignedLongInteger& numer, SignedLongInteger& denom);
+void CompContinuedFraction(int *coeffs, int len, 
+                           SignedLongInteger& numer, SignedLongInteger& denom);
+
+
+/** 実二次体K=Q(√m) (mは平方因子をもたない整数) の基本単数をペル方程式の解法を使って計算する。
+ *
+ * @param m 実二次体K=Q(√m)のm
+ * @param t 基本単数ε=(t+u√D)/2のt (ただし、DはKの判別式)
+ * @param u 基本単数ε=(t+u√D)/2のu (ただし、DはKの判別式)
+ * @return 基本単数のノルム
+ */
+int FoundamentalUnitPellEq(int m, LongInteger& t, LongInteger& u);
+
+
+/** 実二次体K=Q(√m)の基本単数を整えて表示する。
+ *
+ * @param m 実二次体K=Q(√m)のm
+ * @param t 基本単数ε=(t+u√m)/2のt
+ * @param u 基本単数ε=(t+u√m)/2のu
+ * @param sign 基本単数のノルム
+ */
+void Show(int m, const LongInteger& t, const LongInteger& u, const LongInteger& d, int sign);
+
+
+/** 基本単数を表示する。
+ *
+ * @param max_num K=Q(√m) (mは平方因子をもたない) におけるmの最大値
+ */
+void DisplayFoundamentalUnits(int max_num = 200);
 
 #endif // #ifndef FOUNDAMENTAL_UNIT_UNIT_H

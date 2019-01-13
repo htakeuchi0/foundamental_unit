@@ -1,27 +1,45 @@
 /*
- * 二次体K=Q(√m) (mは平方因子をもたない) の基本単数を求めるプログラム。
+ * 実二次体K=Q(√m) (mは平方因子をもたない正整数) の基本単数を求めるプログラム．
  *
- * このモジュールは、[1]の§22.単数(2)に基づくナイーブな実装による、
- * 二次体K=Q(√m) (mは平方因子をもたない) の基本単数を求めるプログラムである。
+ * このモジュールは，
+ * 実二次体K=Q(√m) (mは平方因子をもたない正整数) の基本単数を求めるプログラムである．
  *
- * K=Q(√m)について、判別式をDとすると、Kの単数はT, Uに関する
+ * [1]の§22.単数(2)より，K=Q(√m)について、判別式をDとすると、Kの単数はT, Uに関する
  * 以下の整数方程式
  *  
  *     T^2 - U^2D = ±4
  *
- * の解(T, U)を用いて、
+ * の解(T, U)を用いて，
  *
  *          T + U√D
  *     ε = ---------
  *             2
  *
- * と表される。特に最小正のU=uとそれに対応するT=tをとると、
+ * と表される．特に最小正のU=uとそれに対応するT=tをとると，
  *
  *           t + u√D
  *     ε0 = ---------
  *              2
  *    
- * がKの基本単数(>1)となる。
+ * がKの基本単数(>1)となる．
+ *
+ * ただし，m≡2, 3 (mod 4) の場合は，
+ *
+ *     S^2 - U^2D = ±1    (*)
+ *
+ * の解(S, U)，最小解(s, u)を用いて，
+ *
+ *     ε = S + U√m,    ε0 = s + u√m
+ *
+ * と書ける．
+ *
+ * (*)の形の整数方程式はペル方程式と呼ばれ，
+ * √Dの連分数展開を用いた最小解の構成法が知られている．
+ * 本モジュールでは，m≡2, 3 (mod 4) の場合はこの方法を用いて求める．
+ *
+ * m≡1 (mod 4) の場合でも，m = t^2 + 4 (tは正整数) ｔ書ける場合，
+ * 基本単数が簡単に計算できることが知られている [1, §22, 例3]. 
+ * 本モジュールでは，この解法も採用して，実二次体の基本単数を求める．
  *
  * 参考文献:
  * [1] 石田 信，数学全書5 代数的整数論，森北出版株式会社，東京，1985.
@@ -56,7 +74,7 @@ LongInteger SquarePart(const LongInteger& a, const LongInteger& start) {
 }
 
 
-/* 実二次体K=Q(√m) (mは平方因子をもたない整数) の判別式を返す。
+/* 実二次体K=Q(√m) (mは平方因子をもたない正整数) の判別式を返す。
  *
  * @param m 実二次体K=Q(√m)におけるm
  * @return Kの判別式
@@ -154,7 +172,7 @@ bool IsSquare(const LongInteger& a, LongInteger& root) {
 }
 
 
-/* 実二次体K=Q(√m) (mは平方因子をもたない整数) の基本単数をナイーブな方法で計算する。
+/* 実二次体K=Q(√m) (mは平方因子をもたない正整数) の基本単数をナイーブな方法で計算する。
  *
  * @param m 実二次体K=Q(√m)のm
  * @param t 基本単数ε=(t+u√D)/2のt (ただし、DはKの判別式)
@@ -192,170 +210,6 @@ int FoundamentalUnitNaive(int m, LongInteger& t, LongInteger& u) {
         // uを1増やす
         if (sign < 0) {
             u++;
-        }
-    }
-}
-
-
-/* 実二次体K=Q(√m) (mは平方因子をもたない整数) の基本単数をペル方程式の解法を使って計算する。
- *
- * @param m 実二次体K=Q(√m)のm
- * @param t 基本単数ε=(t+u√D)/2のt (ただし、DはKの判別式)
- * @param u 基本単数ε=(t+u√D)/2のu (ただし、DはKの判別式)
- * @return 基本単数のノルム
- */
-int FoundamentalUnitPellEq(int m, LongInteger& t, LongInteger& u) {
-    // m≡2, 3 (mod 4) のとき，K=Q(√m)の基本単数ε0は，
-    // 整数方程式 S^2 - U^2D = ±1 の最小整数解 (s, u) を計算し，
-    // ε0 = s + u√m として求められる．
-    //
-    // 方程式 S^2 - U^2D = ±1 はペル方程式と呼ばれ，以下のように
-    // √n の連分数展開を用いて最小解を計算できることが知られている．
-    //
-    // ペル方程式の最小解の構成法：
-    //   √m = [a0; (a1, a2, ..., al)] (括弧内は循環節を表す）とするとき，
-    //   p/q = [a0; a1, a2, ..., a(l-1)] を既約分数とすると，
-    //   (s, u) = (p, q)が解となる．
-    //
-    // 連分数：
-    //   [a0; a1, ..., al, ...]
-    //
-    //                        1
-    //      := a0 + ---------------------
-    //                          1 
-    //               a1 + ---------------
-    //                     ...
-    //                                1
-    //                         al + -----
-    //                               ...
-    SignedLongInteger p;
-    SignedLongInteger q;
-    
-    // √mの連分数展開を計算する
-    int coeffs[1000];
-    int len = ApproxContinuedFraction(m, coeffs);
-
-    // [a0; a1, ..., a(l-1)]を計算する
-    ContinuedFraction(coeffs, len-1, p, q); 
-
-    // 表示処理統一のために T^2 - U^2D = ±4 の形式にしておく
-    t = p << 1;
-    u = q << 1;
-    LongInteger sign_long_int = p*p - q*q*m;
-
-#ifdef GMP
-    int sign = sign_long_int.get_si();
-#else
-    int sign = sign_long_int;
-#endif // #ifdef GMP
-
-    return sign;
-}
-
-
-/* 実二次体K=Q(√m)の基本単数を整えて表示する。
- *
- * @param m 実二次体K=Q(√m)のm
- * @param t 基本単数ε=(t+u√D)/2のt (ただし、DはKの判別式)
- * @param u 基本単数ε=(t+u√D)/2のu (ただし、DはKの判別式)
- * @param d Kの判別式
- * @param sign 基本単数のノルム
- */
-void Show(int m, const LongInteger& t, const LongInteger& u, 
-        const LongInteger& d, int sign) {
-    bool is_divisible_by_two = ((u & 0b1) == 0) && ((t & 0b1) == 0);
-
-    // u, tがともに偶数の場合は約分した状態で表示する。
-    if (is_divisible_by_two) {
-        LongInteger t_divided = t >> 1;
-        LongInteger u_divided = u >> 1;
-
-        // uが1のときは1を省略する
-        if (u_divided == 1) {
-            std::cout << m << "," << sign << "," << t_divided << "+" << "√" << d << "\n";
-        }
-        else {
-            std::cout << m << "," << sign << "," << t_divided << "+" 
-                << u_divided << "√" << d << "\n";
-        }
-    }
-    else {
-        // uが1のときは1を省略する
-        if (u == 1) {
-            std::cout << m << "," << sign << ",(" << t << "+" << "√" << d << ")/2\n";
-        }
-        else {
-            std::cout << m << "," << sign << ",(" << t << "+" << u << "√" << d << ")/2\n";
-        }
-    }
-}
-
-
-/* 基本単数を表示する。
- *
- * @param max_num K=Q(√m) (mは平方因子をもたない) におけるmの最大値
- */
-void DisplayFoundamentalUnits(int max_num) {
-    // ヘッダの表示
-    std::cout << "# m, N(ε0), ε0\n";
-
-    // 各K=Q(√m) (m=2,3,...,max_num) について基本単数を求める
-    for (int m = 2; m <= max_num; m++) {
-        // 平方部分をもつ場合は飛ばす
-        if (SquarePart(m) != 1) {
-            continue;
-        }
-
-        LongInteger t;
-        LongInteger u;
-        LongInteger d;
-        int sign;
-        try {
-            // 基本単数を求める
-            if ((m & 0b10) != 0) {
-                // m≡2, 3 (mod 4) のとき，K=Q(√m)の基本単数ε0は，
-                // 整数方程式 S^2 - U^2D = ±1 の最小整数解 (s, u) を計算し，
-                // ε0 = s + u√m として求められる．
-                //
-                // 方程式 S^2 - U^2D = ±1 はペル方程式と呼ばれ，以下のように
-                // √n の連分数展開を用いて最小解を計算できることが知られている．
-                sign = FoundamentalUnitPellEq(m, t, u);
-                d = m;
-            }
-            else {
-                // m≡1 (mod 4) のとき，K=Q(√m)の基本単数ε0は，
-                // 整数方程式 T^2 - U^2D = ±4 の最小整数解 (t, u) を計算し，
-                // 基本単数 ε0 = (t + u√D)/2 を求められる．
-                //
-                // ただし，m = t^2 + 4と書ける場合は，より簡単に計算できる．
-                if (IsSquare(m - 4, t)) {
-                    // m = t^2 + 4の場合，ε0 = (t + √m)/2 となり，
-                    // N_K(ε0) = (t^2 - m)/4 = -1 である．
-                    u = 1;
-                    sign = -1;
-                }
-                else {
-                    // ナイーブな方法でt, uを求める．
-                    sign = FoundamentalUnitNaive(m, t, u);
-                }
-
-                // 判別式
-                d = Discriminant(m);
-            }
-
-            // 判別式の平方部分
-            LongInteger square_part_d = SquarePart(d);
-
-            // u√dを整理
-            d /= (square_part_d * square_part_d);
-            u *= square_part_d;
-
-            // 表示
-            Show(m, t, u, d, sign);
-        }
-        catch (const std::exception& e) {
-            // エラー内容を表示
-            std::cout << m << ",0,(***" << e.what() << ")\n";
         }
     }
 }
@@ -538,8 +392,8 @@ int ApproxContinuedFraction(int n, int *coeffs, int max_num_coeffs) {
  * @param numer 分子
  * @param denom 分母
  */
-void ContinuedFraction(int *coeffs, int len, 
-                       SignedLongInteger& numer, SignedLongInteger& denom) {
+void CompContinuedFraction(int *coeffs, int len, 
+                           SignedLongInteger& numer, SignedLongInteger& denom) {
     // 連分数計算
     // ユークリッドの互除法の逆算で計算する．
     SignedLongInteger p0 = 1;
@@ -559,6 +413,155 @@ void ContinuedFraction(int *coeffs, int len,
 
     numer = p1;
     denom = q1;
+}
+
+
+/* 実二次体K=Q(√m) (mは平方因子をもたない正整数) の基本単数をペル方程式の解法を使って計算する。
+ *
+ * @param m 実二次体K=Q(√m)のm
+ * @param t 基本単数ε=(t+u√D)/2のt (ただし、DはKの判別式)
+ * @param u 基本単数ε=(t+u√D)/2のu (ただし、DはKの判別式)
+ * @return 基本単数のノルム
+ */
+int FoundamentalUnitPellEq(int m, LongInteger& t, LongInteger& u) {
+    // m≡2, 3 (mod 4) のとき，K=Q(√m)の基本単数ε0は，
+    // 整数方程式 S^2 - U^2D = ±1 の最小整数解 (s, u) を計算し，
+    // ε0 = s + u√m として求められる．
+    //
+    // 方程式 S^2 - U^2D = ±1 はペル方程式と呼ばれ，以下のように
+    // √n の連分数展開を用いて最小解を計算できることが知られている．
+    //
+    // ペル方程式の最小解の構成法：
+    //   √m = [a0; (a1, a2, ..., al)] (括弧内は循環節を表す）とするとき，
+    //   p/q = [a0; a1, a2, ..., a(l-1)] を既約分数とすると，
+    //   (s, u) = (p, q)が解となる．
+    //
+    // 連分数：
+    //   [a0; a1, ..., al, ...]
+    //
+    //                        1
+    //      := a0 + ---------------------
+    //                          1 
+    //               a1 + ---------------
+    //                     ...
+    //                                1
+    //                         al + -----
+    //                               ...
+    SignedLongInteger p;
+    SignedLongInteger q;
+    
+    // √mの連分数展開を計算する
+    int coeffs[1000];
+    int len = ApproxContinuedFraction(m, coeffs);
+
+    // [a0; a1, ..., a(l-1)]を計算する
+    CompContinuedFraction(coeffs, len-1, p, q); 
+
+    // 表示処理統一のために T^2 - U^2D = ±4 の形式にしておく
+    t = p << 1;
+    u = q << 1;
+    LongInteger sign_long_int = p*p - q*q*m;
+
+#ifdef GMP
+    int sign = sign_long_int.get_si();
+#else
+    int sign = sign_long_int;
+#endif // #ifdef GMP
+
+    return sign;
+}
+
+
+/* 実二次体K=Q(√m)の基本単数を整えて表示する。
+ *
+ * @param m 実二次体K=Q(√m)のm
+ * @param t 基本単数ε=(t+u√m)/2のt
+ * @param u 基本単数ε=(t+u√m)/2のu
+ * @param sign 基本単数のノルム
+ */
+void Show(int m, const LongInteger& t, const LongInteger& u, int sign) {
+    bool is_divisible_by_two = ((u & 0b1) == 0) && ((t & 0b1) == 0);
+
+    // u, tがともに偶数の場合は約分した状態で表示する。
+    if (is_divisible_by_two) {
+        LongInteger t_divided = t >> 1;
+        LongInteger u_divided = u >> 1;
+
+        // uが1のときは1を省略する
+        if (u_divided == 1) {
+            std::cout << m << "," << sign << "," << t_divided << "+" << "√" << m << "\n";
+        }
+        else {
+            std::cout << m << "," << sign << "," << t_divided << "+" 
+                << u_divided << "√" << m << "\n";
+        }
+    }
+    else {
+        // uが1のときは1を省略する
+        if (u == 1) {
+            std::cout << m << "," << sign << ",(" << t << "+" << "√" << m << ")/2\n";
+        }
+        else {
+            std::cout << m << "," << sign << ",(" << t << "+" << u << "√" << m << ")/2\n";
+        }
+    }
+}
+
+
+/* 基本単数を表示する。
+ *
+ * @param max_num K=Q(√m) (mは平方因子をもたない) におけるmの最大値
+ */
+void DisplayFoundamentalUnits(int max_num) {
+    // ヘッダの表示
+    std::cout << "# m, N(ε0), ε0\n";
+
+    // 各K=Q(√m) (m=2,3,...,max_num) について基本単数を求める
+    for (int m = 2; m <= max_num; m++) {
+        // 平方部分をもつ場合は飛ばす
+        if (SquarePart(m) != 1) {
+            continue;
+        }
+
+        LongInteger t;
+        LongInteger u;
+        int sign;
+        try {
+            // 基本単数を求める
+            if ((m & 0b10) != 0) {
+                // m≡2, 3 (mod 4) のとき，K=Q(√m)の基本単数ε0は，
+                // 整数方程式 S^2 - U^2D = ±1 の最小整数解 (s, u) を計算し，
+                // ε0 = s + u√m として求められる．
+                //
+                // 方程式 S^2 - U^2D = ±1 はペル方程式と呼ばれ，以下のように
+                // √n の連分数展開を用いて最小解を計算できることが知られている．
+                sign = FoundamentalUnitPellEq(m, t, u);
+            }
+            else {
+                // m≡1 (mod 4) のとき，K=Q(√m)の基本単数ε0は，
+                // 整数方程式 T^2 - U^2D = ±4 の最小整数解 (t, u) を計算し，
+                // 基本単数 ε0 = (t + u√D)/2 を求められる．
+                // ただし，m = t^2 + 4と書ける場合は，より簡単に計算できる．
+                if (IsSquare(m - 4, t)) {
+                    // m = t^2 + 4の場合，ε0 = (t + √m)/2 となり，
+                    // N_K(ε0) = (t^2 - m)/4 = -1 である．
+                    u = 1;
+                    sign = -1;
+                }
+                else {
+                    // ナイーブな方法でt, uを求める．
+                    sign = FoundamentalUnitNaive(m, t, u);
+                }
+            }
+
+            // 表示
+            Show(m, t, u, sign);
+        }
+        catch (const std::exception& e) {
+            // エラー内容を表示
+            std::cout << m << ",0,(***" << e.what() << ")\n";
+        }
+    }
 }
 
 
