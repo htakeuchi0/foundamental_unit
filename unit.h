@@ -37,12 +37,18 @@
  * √mの連分数展開を用いた最小解の構成法が知られている．
  * 本モジュールでは，m≡2, 3 (mod 4) の場合はこの方法を用いて求める．
  *
- * m≡1 (mod 4) の場合でも，m = t^2 + 4 (tは正整数) ｔ書ける場合，
+ * m≡1 (mod 4) の場合でも，m = t^2 + 4 (tは正整数) と書ける場合，
  * 基本単数が簡単に計算できることが知られている [1, §22, 例3]. 
  * 本モジュールでは，この解法も採用して，実二次体の基本単数を求める．
  *
+ * m≡1 (mod 4) でm = t^2 + 4 (tは正整数) と書けない場合でも
+ * (1+√m)/2の連分数展開を用いて最小解が構成できることが有澤によって主張されている[2]．
+ * 本稿では，[2]の結果を用いて，この場合の基本単数を求める．
+ *
  * 参考文献:
  * [1] 石田 信，数学全書5 代数的整数論，森北出版株式会社，東京，1985.
+ * [2] 有澤 健治，平方根の連分数とペル方程式 第3版，http://ar.nyx.link/cf/pell.pdf，2018
+ *     (最終閲覧日: 2019/2/14).
  */
 
 #ifndef FOUNDAMENTAL_UNIT_UNIT_H
@@ -149,6 +155,14 @@ bool IsCheckArray(int *a, int start, int end);
 int SquareRootIntegerPart(int n);
 
 
+/** 整数mに対する(1+√m)/2の整数部分を返す．
+ * 
+ * @param m 整数
+ * @return (1+√m)/2の平方根の整数部分
+ */
+int SquareRootIntegerPartExtended(int m);
+
+
 /** 整数nに対する√nの連分数の係数を求め，循環節+1を返す．
  * 
  * @param n 整数
@@ -157,6 +171,16 @@ int SquareRootIntegerPart(int n);
  * @return 循環節+1の値（異常終了時は-1を返す）
  */
 int ApproxContinuedFraction(int n, int *coeffs, int max_num_coeffs = 1000);
+
+
+/** 整数mに対する(1+√m)/2の連分数の係数を求め，循環節+1を返す．
+ * 
+ * @param m 整数
+ * @param coeffs 連分数の係数
+ * @param max_num_coeffs 連分数の係数の最大個数
+ * @return 循環節+1の値（異常終了時は-1を返す）
+ */
+int ApproxContinuedFractionExtended(int m, int *coeffs, int max_num_coeffs = 1000);
 
 
 /** 連分数の係数から，分子と分母を計算して返す．
@@ -178,6 +202,17 @@ void CompContinuedFraction(int *coeffs, int len,
  * @return 基本単数のノルム
  */
 int FoundamentalUnitPellEq(int m, LongInteger& t, LongInteger& u);
+
+
+/** 実二次体K=Q(√m) (mは平方因子をもたない正整数) の基本単数を
+ * 拡張されたペル方程式の解法を使って計算する。
+ *
+ * @param m 実二次体K=Q(√m)のm
+ * @param t 基本単数ε=(t+u√D)/2のt (ただし、DはKの判別式)
+ * @param u 基本単数ε=(t+u√D)/2のu (ただし、DはKの判別式)
+ * @return 基本単数のノルム
+ */
+int FoundamentalUnitPellEqExtended(int m, LongInteger& t, LongInteger& u);
 
 
 /** 実二次体K=Q(√m)の基本単数を整えて表示する。

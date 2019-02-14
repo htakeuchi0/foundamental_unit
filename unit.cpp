@@ -37,12 +37,18 @@
  * √mの連分数展開を用いた最小解の構成法が知られている．
  * 本モジュールでは，m≡2, 3 (mod 4) の場合はこの方法を用いて求める．
  *
- * m≡1 (mod 4) の場合でも，m = t^2 + 4 (tは正整数) ｔ書ける場合，
+ * m≡1 (mod 4) の場合でも，m = t^2 + 4 (tは正整数) と書ける場合，
  * 基本単数が簡単に計算できることが知られている [1, §22, 例3]. 
  * 本モジュールでは，この解法も採用して，実二次体の基本単数を求める．
  *
+ * m≡1 (mod 4) でm = t^2 + 4 (tは正整数) と書けない場合でも
+ * (1+√m)/2の連分数展開を用いて最小解が構成できることが有澤によって主張されている[2]．
+ * 本稿では，[2]の結果を用いて，この場合の基本単数を求める．
+ *
  * 参考文献:
  * [1] 石田 信，数学全書5 代数的整数論，森北出版株式会社，東京，1985.
+ * [2] 有澤 健治，平方根の連分数とペル方程式 第3版，http://ar.nyx.link/cf/pell.pdf，2018
+ *     (最終閲覧日: 2019/2/14).
  */
 
 #include "unit.h"
@@ -260,6 +266,29 @@ int SquareRootIntegerPart(int n) {
 }
 
 
+/* 整数mに対する(1+√m)/2の整数部分を返す．
+ * 
+ * @param m 整数
+ * @return (1+√m)/2の平方根の整数部分
+ */
+int SquareRootIntegerPartExtended(int m) {
+    int left = 1;
+    int right = m;
+    while (right - left > 1) {
+        int middle = (left + right) >> 1;
+
+        int tmp = (middle << 1) - 1;
+        if (m < tmp*tmp) {
+            right = middle;
+        }
+        else {
+            left = middle;
+        }
+    }
+    return left;
+}
+
+
 /* 整数nに対する√nの連分数の係数を求め，循環節+1を返す．
  * 
  * @param n 整数
@@ -385,6 +414,132 @@ int ApproxContinuedFraction(int n, int *coeffs, int max_num_coeffs) {
 }
 
 
+/* 整数mに対する(1+√m)/2の連分数の係数を求め，循環節+1を返す．
+ * 
+ * @param m 整数
+ * @param coeffs 連分数の係数
+ * @param max_num_coeffs 連分数の係数の最大個数
+ * @return 循環節+1の値（異常終了時は-1を返す）
+ */
+int ApproxContinuedFractionExtended(int m, int *coeffs, int max_num_coeffs) {
+    // (1+√m)/2の連分数は，書き下すと，
+    // 
+    // 1 + √m                       1
+    // ------ = a[0] + -----------------------------
+    //   2                           1 
+    //                 a[1] + ---------------------- 
+    //                                1
+    //                        a[2] + --------------
+    //                                   ...
+    //                                 
+    // となるため，以下の手続きで a[0], a[1], ... が求まる．
+    //
+    //   1: ω[0] := (1+√m)/2 
+    //   2: i := 0
+    //   3: while do
+    //   4:     a[i] := floor(ω[i])
+    //   5:     ω[i+1] := 1 / (ω[i] - a[i])
+    //   6:     i := i + 1
+    //   7: end while
+    //
+    // ただし，√mを浮動小数点数演算で求めたときに含まれる誤差や，
+    // ω[i]->ω[i+1] の更新における計算誤差が，繰り返し計算で蓄積するため，
+    // 上記手続きをそのまま実装すると正しく係数 a が求まらないことがある．
+    //
+    // そこで，a[i]は整数であることを利用して，以下のようにω[i+1]を精度良く求める．
+    // (1) まず，以下の整数 α, β, γ, δ を求める．
+    //
+    //              α + β√m
+    //    ω[i+1] = --------      (*)
+    //              γ + δ√m
+    //
+    // ω[i+1]は連分数の形をとるため簡単に計算できる．
+    // また，整数のみの演算で計算できるため，この計算中に誤差は含まれない．
+    // 
+    // (2) 次に，(*)の右辺を変形し，
+    //    
+    //              α + β√m    αγ - βδm   βγ - αδ
+    //    ω[i+1] = --------- = -------- + --------√m = p + q√m
+    //              γ + δ√m    γ^2-δ^2m   γ^2-δ^2m
+    //
+    // を満たすp, qを浮動小数点数として求める．
+    //
+    // (3) p + q√m をNewton法で求める．
+    // 
+    // Newton法は，近似値をωとすると，ω(new) := ω(old) + Δω の形となる．
+    // 浮動小数点数演算では，Δω が ω(old)に比べて十分小さければ，
+    // Δωの精度が悪くても，それが ω(new) の精度に大きく影響しないことが期待できる．
+    //
+    // p + q√m は2次方程式 ω^2 - 2pω + (p^2 - q^2n) = 0 の根なので，
+    // qの符号に関わらず，初期値を p + qm としてNewton法を適用すればよい．
+    // この方法では，平方根計算における誤差や，計算誤差の蓄積なく，
+    // Newton法の更新式の性質とあわせ，精度良くω[i+1]が計算できることが期待される．
+    // (ω[i+1]の整数部分が正しく求める程度の精度でよい点に注意されたい）
+    
+    // nの平方根の整数部分を計算
+    int sqrt_int = SquareRootIntegerPartExtended(m);
+    coeffs[0] = static_cast<int>(sqrt_int);
+
+    // a[1]以降を求める．
+    for (int i = 1; i < max_num_coeffs; i++) {
+        // 連分数計算
+        SignedLongInteger p0 = 1;
+        SignedLongInteger p1 = 0;
+        SignedLongInteger q0 = 0;
+        SignedLongInteger q1 = 1;
+
+        for (int k = 1; k < i; k++) {
+            SignedLongInteger p2 = -coeffs[i - k] * p1 + p0;
+            SignedLongInteger q2 = -coeffs[i - k] * q1 + q0;
+
+            p0 = p1;
+            p1 = p2;
+            q0 = q1;
+            q1 = q2;
+        }
+
+        // α, β, γ, δの計算（すべて整数）
+        SignedLongInteger tmp = (coeffs[0] << 1) - 1;
+        SignedLongInteger a = (p0 << 1) - tmp*p1;
+        SignedLongInteger b = p1;
+        SignedLongInteger c = (q0 << 1) - tmp*q1;
+        SignedLongInteger d = q1;
+
+        // p, qの分母・分子を計算（整数）
+        SignedLongInteger p_numer = a*c - b*d*m;
+        SignedLongInteger q_numer = b*c - a*d;
+        SignedLongInteger denom = c*c - d*d*m;
+
+#ifdef GMP
+        // p, qの計算（倍精度浮動小数点数）
+        double p = p_numer.get_d() / denom.get_d();
+        double q = q_numer.get_d() / denom.get_d();
+#else
+        // p, qの計算（倍精度浮動小数点数）
+        double p = static_cast<double>(p_numer) / denom;
+        double q = static_cast<double>(q_numer) / denom;
+#endif // #ifdef GMP
+
+        // Newton法．初期値はp + qmとする．
+        double omega = p + q*m;
+        int max_k = 100;
+        for (int k = 0; k < max_k; k++) {
+            omega -= (omega*omega - 2.0*p*omega + (p*p - q*q*m)) / (2.0*(omega - p));
+        }
+
+        // omegaの整数部分が連分数の係数になる
+        coeffs[i] = static_cast<int>(omega);
+
+        // 循環節が見つかったらループを終了
+        if (coeffs[i] == 2*coeffs[0] - 1 && IsCheckArray(coeffs, 1, i-1)) {
+            return i + 1;
+        }
+    }
+
+    return -1;
+}
+
+
 /* 連分数の係数から，分子と分母を計算して返す．
  *
  * @param coeffs 連分数の係数
@@ -461,6 +616,66 @@ int FoundamentalUnitPellEq(int m, LongInteger& t, LongInteger& u) {
     t = p << 1;
     u = q << 1;
     LongInteger sign_long_int = p*p - q*q*m;
+
+#ifdef GMP
+    int sign = sign_long_int.get_si();
+#else
+    int sign = sign_long_int;
+#endif // #ifdef GMP
+
+    return sign;
+}
+
+
+/* 実二次体K=Q(√m) (mは平方因子をもたない正整数) の基本単数を
+ * 拡張されたペル方程式の解法を使って計算する。
+ *
+ * @param m 実二次体K=Q(√m)のm
+ * @param t 基本単数ε=(t+u√D)/2のt (ただし、DはKの判別式)
+ * @param u 基本単数ε=(t+u√D)/2のu (ただし、DはKの判別式)
+ * @return 基本単数のノルム
+ */
+int FoundamentalUnitPellEqExtended(int m, LongInteger& t, LongInteger& u) {
+    // m≡1 (mod 4) のとき，K=Q(√m)の基本単数ε0は，
+    // 整数方程式 T^2 - U^2m = ±4 の最小整数解 (t, u) を計算し，
+    // ε0 = (t + u√m)/2 として求められる．
+    //
+    // 方程式 T^2 - U^2m = ±4 も右辺が±1と同様ペル方程式と呼ばれるが，
+    // 通常の右辺が±1の場合と全く同じ方法ではこの方程式は解けない．
+    // ただし，(1+√m)/2 の連分数展開を用いて最小解を計算できることが，
+    // 有澤によって主張されている．
+    // (http://ar.nyx.link/cf/pell.pdf)
+    //
+    // 右辺が±4となるペル方程式（拡張ペル方程式）の最小解の構成法：
+    //   (1+√m)/2 = [a0; (a1, a2, ..., al)] (括弧内は循環節を表す）とするとき，
+    //   p/q = [a0; a1, a2, ..., a(l-1)] を既約分数とすると，
+    //   (t, u) = (2p-q, q)が解となる．
+    //
+    // 連分数：
+    //   [a0; a1, ..., al, ...]
+    //
+    //                        1
+    //      := a0 + ---------------------
+    //                          1 
+    //               a1 + ---------------
+    //                     ...
+    //                                1
+    //                         al + -----
+    //                               ...
+    SignedLongInteger p;
+    SignedLongInteger q;
+    
+    // (1+√m)/2の連分数展開を計算する
+    int coeffs[1000];
+    int len = ApproxContinuedFractionExtended(m, coeffs);
+
+    // [a0; a1, ..., a(l-1)]を計算する
+    CompContinuedFraction(coeffs, len-1, p, q); 
+
+    // T^2 - U^2D = ±4 のT, Uを求める
+    t = (p << 1) - q;
+    u = q;
+    LongInteger sign_long_int = (t*t - u*u*m) >> 2;
 
 #ifdef GMP
     int sign = sign_long_int.get_si();
@@ -549,8 +764,13 @@ void DisplayFoundamentalUnits(int max_num) {
                     sign = -1;
                 }
                 else {
-                    // ナイーブな方法でt, uを求める．
-                    sign = FoundamentalUnitNaive(m, t, u);
+                    // m≡1 (mod 4) のとき，K=Q(√m)の基本単数ε0は，
+                    // 整数方程式 T^2 - U^2m = ±4 の最小整数解 (t, u) を計算し，
+                    // ε0 = (t + u√m)/2 として求められる．
+                    //
+                    // 方程式 T^2 - U^2m = ±4 はペル方程式と呼ばれ，以下のように
+                    // (1+√m)/2 の連分数展開を用いて最小解を計算できることが知られている．
+                    sign = FoundamentalUnitPellEqExtended(m, t, u);
                 }
             }
 
