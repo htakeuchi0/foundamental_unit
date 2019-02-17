@@ -273,9 +273,10 @@ int SquareRootIntegerPart(int n) {
 /* 整数mに対する(1+√m)/2の整数部分を返す．
  * 
  * @param m 整数
- * @return (1+√m)/2の平方根の整数部分
+ * @return (1+√m)/2の整数部分
  */
 int SquareRootIntegerPartExtended(int m) {
+    // m≧1より1≦(1+√m)/2≦m
     LongInteger left = 1;
     LongInteger right = m;
     while (right - left > 1) {
@@ -283,6 +284,46 @@ int SquareRootIntegerPartExtended(int m) {
 
         LongInteger tmp = (middle << 1) - 1;
         if (static_cast<unsigned int>(m) < tmp*tmp) {
+            right = middle;
+        }
+        else {
+            left = middle;
+        }
+    }
+#ifdef GMP
+    return left.get_si();
+#else
+    return left;
+#endif // #ifdef GMP
+}
+
+/* 整数mに対する p_numer/denom + (q_numer/denom)*√mの整数部分を返す．
+ * 
+ * @param p_numer 整数
+ * @param q_numer 整数
+ * @param denom 整数
+ * @param m 整数
+ * @return p_numer/denom + (q_numer/denom)*√m の整数部分
+ */
+int SquareRootIntegerPartWithoutFloat(SignedLongInteger p_numer,
+                                      SignedLongInteger q_numer,
+                                      SignedLongInteger denom,
+                                      int m) {
+    LongInteger left = 1;
+    LongInteger numer = p_numer + q_numer*m;
+#ifdef GMP
+    LongInteger right = static_cast<LongInteger>(numer.get_d()/denom);
+#else
+    LongInteger right = static_cast<LongInteger>(static_cast<double>(numer)/denom);
+#endif // #ifdef GMP
+
+    while (right - left > 1) {
+        LongInteger middle = (left + right) >> 1;
+
+        LongInteger lhs = denom*middle - p_numer;
+        lhs *= lhs;
+        LongInteger rhs = q_numer * q_numer * m;
+        if (lhs > rhs) {
             right = middle;
         }
         else {
@@ -329,7 +370,8 @@ int ApproxContinuedFraction(int n, int *coeffs, int max_num_coeffs) {
     // 上記手続きをそのまま実装すると正しく係数 a が求まらないことがある．
     // （作成者環境では√139で破綻した）
     //
-    // そこで，a[i]は整数であることを利用して，以下のようにω[i+1]を精度良く求める．
+    // そこで，a[i]は整数であることを利用して，以下のように
+    // ω[i+1]の整数部分か，ω[i+1]そのものを精度良く求める．
     // (1) まず，以下の整数 α, β, γ, δ を求める．
     //
     //              α + β√n
@@ -341,11 +383,16 @@ int ApproxContinuedFraction(int n, int *coeffs, int max_num_coeffs) {
     // 
     // (2) 次に，(*)の右辺を変形し，
     //    
-    //              α + β√n    αγ - βδn   βγ - αδ
-    //    ω[i+1] = --------- = -------- + --------√n = p + q√n
-    //              γ + δ√n    γ^2-δ^2n   γ^2-δ^2n
+    //              α + β√n    αγ - βδn   βγ - αδ      p_numer   q_numer
+    //    ω[i+1] = --------- = -------- + --------√n = ------- + -------√n
+    //              γ + δ√n    γ^2-δ^2n   γ^2-δ^2n      denom     denom
     //
-    // を満たすp, qを浮動小数点数として求める．
+    // を満たすp_numer, q_numer, denomを整数演算で求める．
+    // 浮動小数点数演算を使わない場合は，このままω[i+1]の整数部分を求める．
+    // したがって，浮動小数点数を使わない場合は，計算誤差は含まれない．
+    //
+    // 浮動小数点数演算を使う場合は, 
+    // p = p_numer/denom, q = q_numer/denomを浮動小数点数として求める．
     //
     // (3) p + q√n をNewton法で求める．
     // 
@@ -362,6 +409,14 @@ int ApproxContinuedFraction(int n, int *coeffs, int max_num_coeffs) {
     // nの平方根の整数部分を計算
     int sqrt_int = SquareRootIntegerPart(n);
     coeffs[0] = static_cast<int>(sqrt_int);
+
+    // 浮動小数点数演算を認めるか
+#ifdef GMP
+    bool use_float = false;
+#else
+    bool use_float = true;
+#endif // #ifdef GMP
+
 
     // a[1]以降を求める．
     for (int i = 1; i < max_num_coeffs; i++) {
@@ -392,25 +447,30 @@ int ApproxContinuedFraction(int n, int *coeffs, int max_num_coeffs) {
         SignedLongInteger q_numer = b*c - a*d;
         SignedLongInteger denom = c*c - d*d*n;
 
+        if (use_float) {
 #ifdef GMP
-        // p, qの計算（倍精度浮動小数点数）
-        double p = p_numer.get_d() / denom.get_d();
-        double q = q_numer.get_d() / denom.get_d();
+            // p, qの計算（倍精度浮動小数点数）
+            double p = p_numer.get_d() / denom.get_d();
+            double q = q_numer.get_d() / denom.get_d();
 #else
-        // p, qの計算（倍精度浮動小数点数）
-        double p = static_cast<double>(p_numer) / denom;
-        double q = static_cast<double>(q_numer) / denom;
+            // p, qの計算（倍精度浮動小数点数）
+            double p = static_cast<double>(p_numer) / denom;
+            double q = static_cast<double>(q_numer) / denom;
 #endif // #ifdef GMP
 
-        // Newton法．初期値はp + qnとする．
-        double omega = p + q*n;
-        int max_k = 100;
-        for (int k = 0; k < max_k; k++) {
-            omega -= (omega*omega - 2.0*p*omega + (p*p - q*q*n)) / (2.0*(omega - p));
-        }
+            // Newton法．初期値はp + qnとする．
+            double omega = p + q*n;
+            int max_k = 100;
+            for (int k = 0; k < max_k; k++) {
+                omega -= (omega*omega - 2.0*p*omega + (p*p - q*q*n)) / (2.0*(omega - p));
+            }
 
-        // omegaの整数部分が連分数の係数になる
-        coeffs[i] = static_cast<int>(omega);
+            // omegaの整数部分が連分数の係数になる
+            coeffs[i] = static_cast<int>(omega);
+        }
+        else {
+            coeffs[i] = SquareRootIntegerPartWithoutFloat(p_numer, q_numer, denom, n);
+        }
 
         // 循環節が見つかったらループを終了
         if (coeffs[i] == 2*coeffs[0] && IsCheckArray(coeffs, 1, i-1)) {
@@ -454,32 +514,38 @@ int ApproxContinuedFractionExtended(int m, int *coeffs, int max_num_coeffs) {
     // ω[i]->ω[i+1] の更新における計算誤差が，繰り返し計算で蓄積するため，
     // 上記手続きをそのまま実装すると正しく係数 a が求まらないことがある．
     //
-    // そこで，a[i]は整数であることを利用して，以下のようにω[i+1]を精度良く求める．
+    // そこで，a[i]は整数であることを利用して，以下のように
+    // ω[i+1]の整数部分か，ω[i+1]そのものを精度良く求める．
     // (1) まず，以下の整数 α, β, γ, δ を求める．
     //
-    //              α + β√m
+    //              α + β√n
     //    ω[i+1] = --------      (*)
-    //              γ + δ√m
+    //              γ + δ√n
     //
     // ω[i+1]は連分数の形をとるため簡単に計算できる．
     // また，整数のみの演算で計算できるため，この計算中に誤差は含まれない．
     // 
     // (2) 次に，(*)の右辺を変形し，
     //    
-    //              α + β√m    αγ - βδm   βγ - αδ
-    //    ω[i+1] = --------- = -------- + --------√m = p + q√m
-    //              γ + δ√m    γ^2-δ^2m   γ^2-δ^2m
+    //              α + β√n    αγ - βδn   βγ - αδ      p_numer   q_numer
+    //    ω[i+1] = --------- = -------- + --------√n = ------- + -------√n
+    //              γ + δ√n    γ^2-δ^2n   γ^2-δ^2n      denom     denom
     //
-    // を満たすp, qを浮動小数点数として求める．
+    // を満たすp_numer, q_numer, denomを整数演算で求める．
+    // 浮動小数点数演算を使わない場合は，このままω[i+1]の整数部分を求める．
+    // したがって，浮動小数点数を使わない場合は，計算誤差は含まれない．
     //
-    // (3) p + q√m をNewton法で求める．
+    // 浮動小数点数演算を使う場合は, 
+    // p = p_numer/denom, q = q_numer/denomを浮動小数点数として求める．
+    //
+    // (3) p + q√n をNewton法で求める．
     // 
     // Newton法は，近似値をωとすると，ω(new) := ω(old) + Δω の形となる．
     // 浮動小数点数演算では，Δω が ω(old)に比べて十分小さければ，
     // Δωの精度が悪くても，それが ω(new) の精度に大きく影響しないことが期待できる．
     //
-    // p + q√m は2次方程式 ω^2 - 2pω + (p^2 - q^2n) = 0 の根なので，
-    // qの符号に関わらず，初期値を p + qm としてNewton法を適用すればよい．
+    // p + q√n は2次方程式 ω^2 - 2pω + (p^2 - q^2n) = 0 の根なので，
+    // qの符号に関わらず，初期値を p + qn としてNewton法を適用すればよい．
     // この方法では，平方根計算における誤差や，計算誤差の蓄積なく，
     // Newton法の更新式の性質とあわせ，精度良くω[i+1]が計算できることが期待される．
     // (ω[i+1]の整数部分が正しく求める程度の精度でよい点に注意されたい）
@@ -487,6 +553,13 @@ int ApproxContinuedFractionExtended(int m, int *coeffs, int max_num_coeffs) {
     // nの平方根の整数部分を計算
     int sqrt_int = SquareRootIntegerPartExtended(m);
     coeffs[0] = static_cast<int>(sqrt_int);
+
+    // 浮動小数点数演算を認めるか
+#ifdef GMP
+    bool use_float = false;
+#else
+    bool use_float = true;
+#endif // #ifdef GMP
 
     // a[1]以降を求める．
     for (int i = 1; i < max_num_coeffs; i++) {
@@ -518,25 +591,30 @@ int ApproxContinuedFractionExtended(int m, int *coeffs, int max_num_coeffs) {
         SignedLongInteger q_numer = b*c - a*d;
         SignedLongInteger denom = c*c - d*d*m;
 
+        if (use_float) {
 #ifdef GMP
-        // p, qの計算（倍精度浮動小数点数）
-        double p = p_numer.get_d() / denom.get_d();
-        double q = q_numer.get_d() / denom.get_d();
+            // p, qの計算（倍精度浮動小数点数）
+            double p = p_numer.get_d() / denom.get_d();
+            double q = q_numer.get_d() / denom.get_d();
 #else
-        // p, qの計算（倍精度浮動小数点数）
-        double p = static_cast<double>(p_numer) / denom;
-        double q = static_cast<double>(q_numer) / denom;
+            // p, qの計算（倍精度浮動小数点数）
+            double p = static_cast<double>(p_numer) / denom;
+            double q = static_cast<double>(q_numer) / denom;
 #endif // #ifdef GMP
 
-        // Newton法．初期値はp + qmとする．
-        double omega = p + q*m;
-        int max_k = 100;
-        for (int k = 0; k < max_k; k++) {
-            omega -= (omega*omega - 2.0*p*omega + (p*p - q*q*m)) / (2.0*(omega - p));
-        }
+            // Newton法．初期値はp + qmとする．
+            double omega = p + q*m;
+            int max_k = 100;
+            for (int k = 0; k < max_k; k++) {
+                omega -= (omega*omega - 2.0*p*omega + (p*p - q*q*m)) / (2.0*(omega - p));
+            }
 
-        // omegaの整数部分が連分数の係数になる
-        coeffs[i] = static_cast<int>(omega);
+            // omegaの整数部分が連分数の係数になる
+            coeffs[i] = static_cast<int>(omega);
+        }
+        else {
+            coeffs[i] = SquareRootIntegerPartWithoutFloat(p_numer, q_numer, denom, m);
+        }
 
         // 循環節が見つかったらループを終了
         if (coeffs[i] == 2*coeffs[0] - 1 && IsCheckArray(coeffs, 1, i-1)) {

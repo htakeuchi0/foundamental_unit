@@ -163,9 +163,23 @@ int SquareRootIntegerPart(int n);
 /** 整数mに対する(1+√m)/2の整数部分を返す．
  * 
  * @param m 整数
- * @return (1+√m)/2の平方根の整数部分
+ * @return (1+√m)/2の整数部分
  */
 int SquareRootIntegerPartExtended(int m);
+
+
+/* 整数mに対する p_numer/denom + (q_numer/denom)*√mの整数部分を返す．
+ * 
+ * @param p_numer 整数
+ * @param q_numer 整数
+ * @param denom 整数
+ * @param m 整数
+ * @return p_numer/denom + (q_numer/denom)*√m の整数部分
+ */
+int SquareRootIntegerPartWithoutFloat(SignedLongInteger p_numer,
+                                      SignedLongInteger q_numer,
+                                      SignedLongInteger denom,
+                                      int m);
 
 
 /** 整数nに対する√nの連分数の係数を求め，循環節+1を返す．
