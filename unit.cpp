@@ -249,12 +249,12 @@ bool IsCheckArray(int *a, int start, int end) {
  * @return nの平方根の整数部分
  */
 int SquareRootIntegerPart(int n) {
-    int left = 1;
-    int right = n;
+    LongInteger left = 1;
+    LongInteger right = n;
     while (right - left > 1) {
-        int middle = (left + right) >> 1;
+        LongInteger middle = (left + right) >> 1;
 
-        if (n < middle*middle) {
+        if (static_cast<unsigned int>(n) < middle*middle) {
             right = middle;
         }
         else {
@@ -262,7 +262,11 @@ int SquareRootIntegerPart(int n) {
         }
     }
 
+#ifdef GMP
+    return left.get_si();
+#else
     return left;
+#endif // #ifdef GMP
 }
 
 
@@ -272,20 +276,24 @@ int SquareRootIntegerPart(int n) {
  * @return (1+√m)/2の平方根の整数部分
  */
 int SquareRootIntegerPartExtended(int m) {
-    int left = 1;
-    int right = m;
+    LongInteger left = 1;
+    LongInteger right = m;
     while (right - left > 1) {
-        int middle = (left + right) >> 1;
+        LongInteger middle = (left + right) >> 1;
 
-        int tmp = (middle << 1) - 1;
-        if (m < tmp*tmp) {
+        LongInteger tmp = (middle << 1) - 1;
+        if (static_cast<unsigned int>(m) < tmp*tmp) {
             right = middle;
         }
         else {
             left = middle;
         }
     }
+#ifdef GMP
+    return left.get_si();
+#else
     return left;
+#endif // #ifdef GMP
 }
 
 
@@ -606,8 +614,11 @@ int FoundamentalUnitPellEq(int m, LongInteger& t, LongInteger& u) {
     SignedLongInteger q;
     
     // √mの連分数展開を計算する
-    int coeffs[1000];
+    int coeffs[ARRAY_SIZE];
     int len = ApproxContinuedFraction(m, coeffs);
+    if (len == -1) {
+        throw std::runtime_error("*** [ERROR] Could not compute. (Computation might be possible by setting ARRAY_SIZE to a larger value.)");
+    }
 
     // [a0; a1, ..., a(l-1)]を計算する
     CompContinuedFraction(coeffs, len-1, p, q); 
@@ -666,8 +677,11 @@ int FoundamentalUnitPellEqExtended(int m, LongInteger& t, LongInteger& u) {
     SignedLongInteger q;
     
     // (1+√m)/2の連分数展開を計算する
-    int coeffs[1000];
+    int coeffs[ARRAY_SIZE];
     int len = ApproxContinuedFractionExtended(m, coeffs);
+    if (len == -1) {
+        throw std::runtime_error("*** [ERROR] Could not compute. (Computation might be possible by setting ARRAY_SIZE to a larger value.)");
+    }
 
     // [a0; a1, ..., a(l-1)]を計算する
     CompContinuedFraction(coeffs, len-1, p, q); 
@@ -693,8 +707,9 @@ int FoundamentalUnitPellEqExtended(int m, LongInteger& t, LongInteger& u) {
  * @param t 基本単数ε=(t+u√m)/2のt
  * @param u 基本単数ε=(t+u√m)/2のu
  * @param sign 基本単数のノルム
+ * @param is_table_form 表形式で表示するときtrue
  */
-void Show(int m, const LongInteger& t, const LongInteger& u, int sign) {
+void Show(int m, const LongInteger& t, const LongInteger& u, int sign, bool is_table_form) {
     bool is_divisible_by_two = ((u & 0b1) == 0) && ((t & 0b1) == 0);
 
     // u, tがともに偶数の場合は約分した状態で表示する。
@@ -704,92 +719,238 @@ void Show(int m, const LongInteger& t, const LongInteger& u, int sign) {
 
         // uが1のときは1を省略する
         if (u_divided == 1) {
-            std::cout << m << "," << sign << "," << t_divided << "+" << "√" << m << "\n";
+            if (is_table_form) {
+                std::cout << m << "," << sign << "," << t_divided << "+" << "√" << m << "\n";
+            }
+            else {
+                std::cout << "K:       " << "Q(√" << m << ")\n";
+                std::cout << "ε0:      " << t_divided << "+" << "√" << m << "\n";
+                std::cout << "N_K(ε0): " << sign << "\n";
+            }
         }
         else {
-            std::cout << m << "," << sign << "," << t_divided << "+" 
-                << u_divided << "√" << m << "\n";
+            if (is_table_form) {
+                std::cout << m << "," << sign << "," << t_divided << "+" 
+                    << u_divided << "√" << m << "\n";
+            }
+            else {
+                std::cout << "K:       " << "Q(√" << m << ")\n";
+                std::cout << "ε0:      " << t_divided << "+" << u_divided << "√" << m << "\n";
+                std::cout << "N_K(ε0): " << sign << "\n";
+            }
         }
     }
     else {
         // uが1のときは1を省略する
         if (u == 1) {
-            std::cout << m << "," << sign << ",(" << t << "+" << "√" << m << ")/2\n";
+            if (is_table_form) {
+                std::cout << m << "," << sign << ",(" << t << "+" << "√" << m << ")/2\n";
+            }
+            else {
+                std::cout << "K:       " << "Q(√" << m << ")\n";
+                std::cout << "ε0:      " << "(" << t << "+" << "√" << m << ")/2\n";
+                std::cout << "N_K(ε0): " << sign << "\n";
+            }
         }
         else {
-            std::cout << m << "," << sign << ",(" << t << "+" << u << "√" << m << ")/2\n";
+            if (is_table_form) {
+                std::cout << m << "," << sign << ",(" << t << "+" << u << "√" << m << ")/2\n";
+            }
+            else {
+                std::cout << "K:       " << "Q(√" << m << ")\n";
+                std::cout << "ε0:      " << "(" << t << "+" << u << "√" << m << ")/2\n";
+                std::cout << "N_K(ε0): " << sign << "\n";
+            }
         }
     }
 }
 
 
-/* 基本単数を表示する。
+/** 基本単数を表示する。
  *
+ * @param m K=Q(√m) (mは平方因子をもたない) におけるm
+ * @param is_table_form 表形式で表示するときtrue
+ */
+void DisplayFoundamentalUnit(int m, bool is_table_form) {
+    LongInteger t;
+    LongInteger u;
+    try {
+        // 基本単数を求める
+        int sign = FoundamentalUnit(m, t, u);
+
+        // 表示
+        Show(m, t, u, sign, is_table_form);
+    }
+    catch (const std::exception& e) {
+        // エラー内容を表示
+        if (is_table_form) {
+            std::cout << m << ",0,(***" << e.what() << ")\n";
+        }
+        else {
+            std::cout << "K:     " << "Q(√" << m << ")\n";
+            std::cout << "*** [ERROR] " << e.what() << "\n";
+        }
+    }
+}
+
+
+/** 与えられた範囲の基本単数を表示する。
+ *
+ * @param min_num K=Q(√m) (mは平方因子をもたない) におけるmの最小値
  * @param max_num K=Q(√m) (mは平方因子をもたない) におけるmの最大値
  */
-void DisplayFoundamentalUnits(int max_num) {
+void DisplayFoundamentalUnits(int min_num, int max_num) {
     // ヘッダの表示
-    std::cout << "# m, N(ε0), ε0\n";
+    if (min_num <= max_num) {
+        std::cout << "# m, N_K(ε0), ε0\n";
+    }
 
     // 各K=Q(√m) (m=2,3,...,max_num) について基本単数を求める
-    for (int m = 2; m <= max_num; m++) {
+    for (int m = min_num; m <= max_num; m++) {
         // 平方部分をもつ場合は飛ばす
-        if (SquarePart(m) != 1) {
+        if (SquarePart(m) != 1 || m == 1) {
             continue;
         }
 
-        LongInteger t;
-        LongInteger u;
-        int sign;
-        try {
-            // 基本単数を求める
-            if ((m & 0b10) != 0) {
-                // m≡2, 3 (mod 4) のとき，K=Q(√m)の基本単数ε0は，
-                // 整数方程式 S^2 - U^2m = ±1 の最小整数解 (s, u) を計算し，
-                // ε0 = s + u√m として求められる．
-                //
-                // 方程式 S^2 - U^2m = ±1 はペル方程式と呼ばれ，以下のように
-                // √m の連分数展開を用いて最小解を計算できることが知られている．
-                sign = FoundamentalUnitPellEq(m, t, u);
-            }
-            else {
-                // m≡1 (mod 4) のとき，K=Q(√m)の基本単数ε0は，
-                // 整数方程式 T^2 - U^2D = ±4 の最小整数解 (t, u) を計算し，
-                // 基本単数 ε0 = (t + u√D)/2 を求められる．
-                // ただし，m = t^2 + 4と書ける場合は，より簡単に計算できる．
-                if (IsSquare(m - 4, t)) {
-                    // m = t^2 + 4の場合，ε0 = (t + √m)/2 となり，
-                    // N_K(ε0) = (t^2 - m)/4 = -1 である．
-                    u = 1;
-                    sign = -1;
-                }
-                else {
-                    // m≡1 (mod 4) のとき，K=Q(√m)の基本単数ε0は，
-                    // 整数方程式 T^2 - U^2m = ±4 の最小整数解 (t, u) を計算し，
-                    // ε0 = (t + u√m)/2 として求められる．
-                    //
-                    // 方程式 T^2 - U^2m = ±4 はペル方程式と呼ばれ，以下のように
-                    // (1+√m)/2 の連分数展開を用いて最小解を計算できることが知られている．
-                    sign = FoundamentalUnitPellEqExtended(m, t, u);
-                }
-            }
-
-            // 表示
-            Show(m, t, u, sign);
-        }
-        catch (const std::exception& e) {
-            // エラー内容を表示
-            std::cout << m << ",0,(***" << e.what() << ")\n";
-        }
+        DisplayFoundamentalUnit(m, true);
     }
 }
 
 
+/* K=Q(√m)の基本単数(t+u√D)/2と表したときの，t, uを取得する
+ *
+ * @param m 実二次体K=Q(√m)のm
+ * @param t 基本単数ε=(t+u√m)/2のt
+ * @param u 基本単数ε=(t+u√m)/2のu
+ * @return sign 基本単数のノルム
+ */
+int FoundamentalUnit(int m, LongInteger& t, LongInteger& u) {
+#ifdef GMP
+    int max_m = std::numeric_limits<int>::max();
+#else
+    int max_m = 523;
+#endif  // #ifdef GMP
+
+    // 負数判定
+    if (m <= 0) {
+        throw std::runtime_error("The value of m must be positive.");
+    }
+
+    // オーバフロー判定
+    if (m > max_m) {
+        throw std::runtime_error("The value of m must be " + std::to_string(max_m) + " or less.");
+    }
+
+    // 平方部分をもつか判定
+    if (SquarePart(m) != 1) {
+        throw std::runtime_error("The value of m has a square part.");
+    }
+
+    int sign = 0;
+
+    // 基本単数を求める
+    if ((m & 0b10) != 0) {
+        // m≡2, 3 (mod 4) のとき，K=Q(√m)の基本単数ε0は，
+        // 整数方程式 S^2 - U^2m = ±1 の最小整数解 (s, u) を計算し，
+        // ε0 = s + u√m として求められる．
+        //
+        // 方程式 S^2 - U^2m = ±1 はペル方程式と呼ばれ，以下のように
+        // √m の連分数展開を用いて最小解を計算できることが知られている．
+        sign = FoundamentalUnitPellEq(m, t, u);
+    }
+    else {
+        // m≡1 (mod 4) のとき，K=Q(√m)の基本単数ε0は，
+        // 整数方程式 T^2 - U^2D = ±4 の最小整数解 (t, u) を計算し，
+        // 基本単数 ε0 = (t + u√D)/2 を求められる．
+        // ただし，m = t^2 + 4と書ける場合は，より簡単に計算できる．
+        if (IsSquare(m - 4, t)) {
+            // m = t^2 + 4の場合，ε0 = (t + √m)/2 となり，
+            // N_K(ε0) = (t^2 - m)/4 = -1 である．
+            u = 1;
+            sign = -1;
+        }
+        else {
+            // m≡1 (mod 4) のとき，K=Q(√m)の基本単数ε0は，
+            // 整数方程式 T^2 - U^2m = ±4 の最小整数解 (t, u) を計算し，
+            // ε0 = (t + u√m)/2 として求められる．
+            //
+            // 方程式 T^2 - U^2m = ±4 はペル方程式と呼ばれ，以下のように
+            // (1+√m)/2 の連分数展開を用いて最小解を計算できることが知られている．
+            sign = FoundamentalUnitPellEqExtended(m, t, u);
+        }
+    }
+
+    return sign;
+}
+
+/* ヘルプを表示する
+ */
+void PrintUsage() {
+    std::cout << "Usage:\n";
+    std::cout << "  ./unit -h               show this help message\n";
+    std::cout << "  ./unit --help           show this help message\n";
+    std::cout << "\n";
+    std::cout << "  ./unit                  display foundamental units of Q(√m)"
+                 " for m = [2..199]\n";
+    std::cout << "\n";
+    std::cout << "  ./unit m                display a foundamental unit of Q(√m)\n";
+    std::cout << "\n";
+    std::cout << "  ./unit min_m max        display foundamental units of Q(√m)"
+                 " for m = [min_m..max_m]\n";
+    std::cout << "\n";
+    std::cout << "Examples:\n";
+    std::cout << "  ./unit 2\n";
+    std::cout << "  ./unit 2 200\n";
+}
+
 /** 実験用メインメソッド
  */
-int main() {
-    // 基本単数を表示する
-    DisplayFoundamentalUnits();
+int main(int argc, char *argv[]) {
+    int m = 0;
+    int min_m = 0;
+    int max_m = 0;
+    int int_max = std::numeric_limits<int>::max();
+
+    // ヘルプの表示
+    if (argc > 1) {
+        std::string arg_str = argv[1];
+        if (argv[1] == std::string("--help") || argv[1] == std::string("-h")) {
+            PrintUsage();
+            return 0;
+        }
+    }
+
+    switch (argc) {
+    case 1:
+        // 基本単数のリストを表示する
+        DisplayFoundamentalUnits();
+        break;
+
+    case 2:
+        // intに丸める前にオーバーフロー判定
+        if (std::atoll(argv[1]) > int_max) {
+            std::cout << "*** [ERROR] At least the value of m must be INT_MAX or less.\n";
+            return -1;
+        }
+
+        // 基本単数を表示する
+        m = std::atoi(argv[1]);
+        DisplayFoundamentalUnit(m, false);
+        break;
+
+    default:
+        // intに丸める前にオーバーフロー判定
+        if (std::atoll(argv[1]) > int_max || std::atoll(argv[2]) > int_max) {
+            std::cout << "*** [ERROR] At least the value of m must be INT_MAX or less.\n";
+            return -1;
+        }
+
+        // 基本単数を表示する
+        min_m = std::atoi(argv[1]);
+        max_m = std::atoi(argv[2]);
+        DisplayFoundamentalUnits(min_m, max_m);
+        break;
+    }
 
     return 0;
 }

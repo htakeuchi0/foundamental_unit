@@ -54,6 +54,7 @@
 #ifndef FOUNDAMENTAL_UNIT_UNIT_H
 #define FOUNDAMENTAL_UNIT_UNIT_H
 
+#include <limits>
 #include <iostream>
 #include <stdexcept>
 
@@ -72,6 +73,10 @@
     using LongInteger = unsigned long long int;
     using SignedLongInteger = long long int;
 #endif  // #ifdef GMP
+
+/** 配列の大きさ
+ */
+static const int ARRAY_SIZE = 100000;
 
 
 /** 静的配列のサイズを返す。
@@ -170,7 +175,7 @@ int SquareRootIntegerPartExtended(int m);
  * @param max_num_coeffs 連分数の係数の最大個数
  * @return 循環節+1の値（異常終了時は-1を返す）
  */
-int ApproxContinuedFraction(int n, int *coeffs, int max_num_coeffs = 1000);
+int ApproxContinuedFraction(int n, int *coeffs, int max_num_coeffs = ARRAY_SIZE);
 
 
 /** 整数mに対する(1+√m)/2の連分数の係数を求め，循環節+1を返す．
@@ -180,7 +185,7 @@ int ApproxContinuedFraction(int n, int *coeffs, int max_num_coeffs = 1000);
  * @param max_num_coeffs 連分数の係数の最大個数
  * @return 循環節+1の値（異常終了時は-1を返す）
  */
-int ApproxContinuedFractionExtended(int m, int *coeffs, int max_num_coeffs = 1000);
+int ApproxContinuedFractionExtended(int m, int *coeffs, int max_num_coeffs = ARRAY_SIZE);
 
 
 /** 連分数の係数から，分子と分母を計算して返す．
@@ -221,14 +226,37 @@ int FoundamentalUnitPellEqExtended(int m, LongInteger& t, LongInteger& u);
  * @param t 基本単数ε=(t+u√m)/2のt
  * @param u 基本単数ε=(t+u√m)/2のu
  * @param sign 基本単数のノルム
+ * @param is_table_form 表形式で表示するときtrue
  */
-void Show(int m, const LongInteger& t, const LongInteger& u, const LongInteger& d, int sign);
+void Show(int m, const LongInteger& t, const LongInteger& u, int sign, bool is_table_form);
 
 
 /** 基本単数を表示する。
  *
+ * @param m K=Q(√m) (mは平方因子をもたない) におけるm
+ * @param is_table_form 表形式で表示するときtrue
+ */
+void DisplayFoundamentalUnit(int m);
+
+
+/** 与えられた範囲の基本単数を表示する。
+ *
+ * @param min_num K=Q(√m) (mは平方因子をもたない) におけるmの最小値
  * @param max_num K=Q(√m) (mは平方因子をもたない) におけるmの最大値
  */
-void DisplayFoundamentalUnits(int max_num = 200);
+void DisplayFoundamentalUnits(int min_num = 2, int max_num = 200);
+
+/** K=Q(√m)の基本単数(t+u√D)/2と表したときの，t, uを取得する
+ *
+ * @param m 実二次体K=Q(√m)のm
+ * @param t 基本単数ε=(t+u√m)/2のt
+ * @param u 基本単数ε=(t+u√m)/2のu
+ * @return sign 基本単数のノルム
+ */
+int FoundamentalUnit(int m, LongInteger& t, LongInteger& u);
+
+/** ヘルプを表示する
+ */
+void PrintUsage();
 
 #endif // #ifndef FOUNDAMENTAL_UNIT_UNIT_H
