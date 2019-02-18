@@ -146,7 +146,7 @@ int FoundamentalUnitNaive(int m, LongInteger& t, LongInteger& u);
  *
  * @param a 配列
  * @param start 対称となる部分配列の初めの要素番号
- * @param start 対称となる部分配列の最後の要素番号
+ * @param end 対称となる部分配列の最後の要素番号
  * @return 配列が対称になっているときtrue
  */
 bool IsCheckArray(int *a, int start, int end);
@@ -168,7 +168,7 @@ int SquareRootIntegerPart(int n);
 int SquareRootIntegerPartExtended(int m);
 
 
-/* 整数mに対する p_numer/denom + (q_numer/denom)*√mの整数部分を返す．
+/** 整数mに対する p_numer/denom + (q_numer/denom)*√m の整数部分を返す．
  * 
  * @param p_numer 整数
  * @param q_numer 整数
@@ -176,10 +176,10 @@ int SquareRootIntegerPartExtended(int m);
  * @param m 整数
  * @return p_numer/denom + (q_numer/denom)*√m の整数部分
  */
-int SquareRootIntegerPartWithoutFloat(SignedLongInteger p_numer,
-                                      SignedLongInteger q_numer,
-                                      SignedLongInteger denom,
-                                      int m);
+int SquareRootIntegerPartForWithoutFloat(SignedLongInteger p_numer,
+                                         SignedLongInteger q_numer,
+                                         SignedLongInteger denom,
+                                         int m);
 
 
 /** 整数nに対する√nの連分数の係数を求め，循環節+1を返す．

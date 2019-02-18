@@ -225,7 +225,7 @@ int FoundamentalUnitNaive(int m, LongInteger& t, LongInteger& u) {
  *
  * @param a 配列
  * @param start 対称となる部分配列の初めの要素番号
- * @param start 対称となる部分配列の最後の要素番号
+ * @param end 対称となる部分配列の最後の要素番号
  */
 bool IsCheckArray(int *a, int start, int end) {
     int i = start;
@@ -297,7 +297,7 @@ int SquareRootIntegerPartExtended(int m) {
 #endif // #ifdef GMP
 }
 
-/* 整数mに対する p_numer/denom + (q_numer/denom)*√mの整数部分を返す．
+/* 整数mに対する p_numer/denom + (q_numer/denom)*√m の整数部分を返す．
  * 
  * @param p_numer 整数
  * @param q_numer 整数
@@ -305,10 +305,10 @@ int SquareRootIntegerPartExtended(int m) {
  * @param m 整数
  * @return p_numer/denom + (q_numer/denom)*√m の整数部分
  */
-int SquareRootIntegerPartWithoutFloat(SignedLongInteger p_numer,
-                                      SignedLongInteger q_numer,
-                                      SignedLongInteger denom,
-                                      int m) {
+int SquareRootIntegerPartForWithoutFloat(SignedLongInteger p_numer,
+                                         SignedLongInteger q_numer,
+                                         SignedLongInteger denom,
+                                         int m) {
     LongInteger left = 1;
     LongInteger numer = p_numer + q_numer*m;
 #ifdef GMP
@@ -411,6 +411,7 @@ int ApproxContinuedFraction(int n, int *coeffs, int max_num_coeffs) {
     coeffs[0] = static_cast<int>(sqrt_int);
 
     // 浮動小数点数演算を認めるか
+    // (GMP未使用時のみとする)
 #ifdef GMP
     bool use_float = false;
 #else
@@ -469,7 +470,7 @@ int ApproxContinuedFraction(int n, int *coeffs, int max_num_coeffs) {
             coeffs[i] = static_cast<int>(omega);
         }
         else {
-            coeffs[i] = SquareRootIntegerPartWithoutFloat(p_numer, q_numer, denom, n);
+            coeffs[i] = SquareRootIntegerPartForWithoutFloat(p_numer, q_numer, denom, n);
         }
 
         // 循環節が見つかったらループを終了
@@ -555,6 +556,7 @@ int ApproxContinuedFractionExtended(int m, int *coeffs, int max_num_coeffs) {
     coeffs[0] = static_cast<int>(sqrt_int);
 
     // 浮動小数点数演算を認めるか
+    // (GMP未使用時のみとする)
 #ifdef GMP
     bool use_float = false;
 #else
@@ -613,7 +615,7 @@ int ApproxContinuedFractionExtended(int m, int *coeffs, int max_num_coeffs) {
             coeffs[i] = static_cast<int>(omega);
         }
         else {
-            coeffs[i] = SquareRootIntegerPartWithoutFloat(p_numer, q_numer, denom, m);
+            coeffs[i] = SquareRootIntegerPartForWithoutFloat(p_numer, q_numer, denom, m);
         }
 
         // 循環節が見つかったらループを終了
@@ -731,9 +733,8 @@ int FoundamentalUnitPellEqExtended(int m, LongInteger& t, LongInteger& u) {
     //
     // 方程式 T^2 - U^2m = ±4 も右辺が±1と同様ペル方程式と呼ばれるが，
     // 通常の右辺が±1の場合と全く同じ方法ではこの方程式は解けない．
-    // ただし，(1+√m)/2 の連分数展開を用いて最小解を計算できることが，
-    // 有澤によって主張されている．
-    // (http://ar.nyx.link/cf/pell.pdf)
+    // ただし，(1+√m)/2 の連分数展開を用いて最小解を計算できることが知られている．
+    // (例えば，http://ar.nyx.link/cf/pell.pdf)
     //
     // 右辺が±4となるペル方程式（拡張ペル方程式）の最小解の構成法：
     //   (1+√m)/2 = [a0; (a1, a2, ..., al)] (括弧内は循環節を表す）とするとき，
